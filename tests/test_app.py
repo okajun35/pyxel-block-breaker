@@ -85,6 +85,15 @@ class AppInitTests(unittest.TestCase):
 
         self.assertEqual(len(app.metrics.rows), 1)
 
+    def test_enemy_active_in_beginner_is_delayed(self):
+        app = App.__new__(App)
+        app.enemy_enabled_option = True
+        app.play_style_beginner = True
+        app.stage = 1
+        app.run_elapsed_frames = 30
+        app.blocks_broken_total = 0
+        self.assertFalse(App._enemy_active(app))
+
     def test_save_screenshot_creates_tmp_jp_png(self):
         app = App.__new__(App)
         app.shot_message = ""

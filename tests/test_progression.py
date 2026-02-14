@@ -50,6 +50,14 @@ class ProgressionTests(unittest.TestCase):
             self.assertTrue(store.try_upgrade_paddle())
             self.assertEqual(store.state.paddle_upgrade_level, 1)
 
+    def test_mark_tutorial_seen(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "progression.json"
+            store = ProgressionStore(path)
+            self.assertFalse(store.state.tutorial_seen)
+            store.mark_tutorial_seen()
+            self.assertTrue(store.state.tutorial_seen)
+
 
 if __name__ == "__main__":
     unittest.main()

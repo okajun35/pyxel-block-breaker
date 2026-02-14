@@ -9,6 +9,7 @@ class ProgressionState:
     life_upgrade_level: int = 0
     core_gain_upgrade_level: int = 0
     paddle_upgrade_level: int = 0
+    tutorial_seen: bool = False
 
 
 class ProgressionStore:
@@ -40,6 +41,7 @@ class ProgressionStore:
             paddle_upgrade_level=max(
                 0, min(self.MAX_PADDLE_UPGRADE, int(data.get("paddle_upgrade_level", 0)))
             ),
+            tutorial_seen=bool(data.get("tutorial_seen", False)),
         )
 
     def save(self):
@@ -49,6 +51,7 @@ class ProgressionStore:
             "life_upgrade_level": self.state.life_upgrade_level,
             "core_gain_upgrade_level": self.state.core_gain_upgrade_level,
             "paddle_upgrade_level": self.state.paddle_upgrade_level,
+            "tutorial_seen": self.state.tutorial_seen,
         }
         self.path.write_text(json.dumps(data, ensure_ascii=True, indent=2), encoding="utf-8")
 
@@ -87,3 +90,9 @@ class ProgressionStore:
         self.state.paddle_upgrade_level += 1
         self.save()
         return True
+
+    def mark_tutorial_seen(self):
+        if self.state.tutorial_seen:
+            return
+        self.state.tutorial_seen = True
+        self.save()

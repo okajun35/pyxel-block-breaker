@@ -10,6 +10,7 @@ class ItemType(str, Enum):
 
 class GameState(str, Enum):
     TITLE = "title"
+    TUTORIAL = "tutorial"
     WAITING_START = "waiting_start"
     PLAYING = "playing"
     STAGE_CLEAR = "stage_clear"

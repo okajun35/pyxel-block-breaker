@@ -24,7 +24,6 @@ from game.constants import (
     JP_FONT_FALLBACK_PATH,
     JP_FONT_PATH,
     JP_FONT_SYSTEM_CANDIDATES,
-    JP_SMALL_FONT_PATH,
     JP_FONT_SIZE,
     START_PANEL_H,
     START_PANEL_W,
@@ -88,9 +87,9 @@ class App:
         env_font = os.getenv("JP_FONT_PATH")
         if env_font:
             yield env_font
-        yield JP_FONT_PATH
         for path in JP_FONT_SYSTEM_CANDIDATES:
             yield path
+        yield JP_FONT_PATH
 
     def load_jp_font(self, size: int):
         for path in self._font_candidates():
@@ -104,10 +103,7 @@ class App:
             return None
 
     def load_jp_small_font(self):
-        try:
-            return pyxel.Font(JP_SMALL_FONT_PATH)
-        except Exception:
-            return self.load_jp_font(JP_FONT_SIZE)
+        return self.load_jp_font(JP_FONT_SIZE)
 
     def setup_audio(self):
         pyxel.sounds[0].set("c3e3g3c4", "p", "7", "n", 20)
@@ -206,6 +202,9 @@ class App:
         self.blocks_broken_total = 0
         self.items_collected_total = 0
         self.intro_spawn_index = 0
+        self.play_style_beginner = not self._tutorial_seen()
+        self.enemy_enabled_option = True
+        self.enemy_visible_option = True
         self.state = GameState.WAITING_START
         self.stage_clear_timer = 0
         self.shot_message = ""
@@ -259,6 +258,16 @@ class App:
 
     def _is_intro_fixed(self) -> bool:
         return self.stage == 1 and self.run_elapsed_frames < 60 * 5
+
+    def _enemy_active(self) -> bool:
+        if not self.enemy_enabled_option:
+            return False
+        if self.play_style_beginner and self.stage == 1:
+            if self.run_elapsed_frames < 60 * 2:
+                return False
+            if self.blocks_broken_total < 6:
+                return False
+        return True
 
     def _spawn_enemy(self):
         elapsed_sec = self.run_elapsed_frames // 60
@@ -437,6 +446,11 @@ class App:
             return 0
         return self.progression.state.life_upgrade_level
 
+    def _tutorial_seen(self) -> bool:
+        if not hasattr(self, "progression"):
+            return False
+        return bool(getattr(self.progression.state, "tutorial_seen", False))
+
     def _paddle_upgrade_bonus(self) -> int:
         if not hasattr(self, "progression"):
             return 0
@@ -446,6 +460,18 @@ class App:
         if not hasattr(self, "progression"):
             return 1.0
         return 1.0 + self.progression.state.core_gain_upgrade_level * 0.2
+
+    def _mode_label_jp(self) -> str:
+        if self.selected_mode == DifficultyMode.STORY:
+            return "やさしい"
+        if self.selected_mode == DifficultyMode.HARDCORE:
+            return "むずかしい"
+        return "ふつう"
+
+    def _protocol_label_jp(self) -> str:
+        if self.selected_protocol == ProtocolType.FUSION:
+            return "ゆうごう"
+        return "はんしゃ"
 
     def _grant_core_for_stage_clear(self):
         if not hasattr(self, "progression"):
@@ -529,7 +555,12 @@ class App:
     def auto_play(self):
         if not self.auto.enabled:
             return
-        if self.state in (GameState.TITLE, GameState.WAITING_START) and pyxel.frame_count > 10:
+        if self.state == GameState.TITLE and pyxel.frame_count > 6:
+            self.state = GameState.TUTORIAL
+        if self.state == GameState.TUTORIAL and pyxel.frame_count > 20:
+            self.progression.mark_tutorial_seen()
+            self.state = GameState.PLAYING
+        if self.state == GameState.WAITING_START and pyxel.frame_count > 10:
             self.state = GameState.PLAYING
         if self.state == GameState.PLAYING and self.ball_system.balls:
             target_x = self.ball_system.balls[0].x
@@ -572,25 +603,9 @@ class App:
 
         if self.state == GameState.TITLE:
             if pyxel.btnp(pyxel.KEY_UP):
-                self.title_menu_index = (self.title_menu_index - 1) % 3
+                self.title_menu_index = (self.title_menu_index - 1) % 6
             if pyxel.btnp(pyxel.KEY_DOWN):
-                self.title_menu_index = (self.title_menu_index + 1) % 3
-            if pyxel.btnp(pyxel.KEY_1):
-                self.selected_mode = DifficultyMode.STORY
-                self.setup_stage()
-            if pyxel.btnp(pyxel.KEY_2):
-                self.selected_mode = DifficultyMode.STANDARD
-                self.setup_stage()
-            if pyxel.btnp(pyxel.KEY_3):
-                self.selected_mode = DifficultyMode.HARDCORE
-                self.setup_stage()
-            if pyxel.btnp(pyxel.KEY_TAB):
-                self.selected_protocol = (
-                    ProtocolType.REFLEX
-                    if self.selected_protocol == ProtocolType.FUSION
-                    else ProtocolType.FUSION
-                )
-                self.setup_stage()
+                self.title_menu_index = (self.title_menu_index + 1) % 6
             if pyxel.btnp(pyxel.KEY_LEFT) or pyxel.btnp(pyxel.KEY_RIGHT):
                 if self.title_menu_index == 1:
                     if self.selected_mode == DifficultyMode.STORY:
@@ -607,6 +622,14 @@ class App:
                         else ProtocolType.FUSION
                     )
                     self.setup_stage()
+                if self.title_menu_index == 3:
+                    self.play_style_beginner = not self.play_style_beginner
+                if self.title_menu_index == 4:
+                    self.enemy_enabled_option = not self.enemy_enabled_option
+                    if not self.enemy_enabled_option:
+                        self.enemy_visible_option = False
+                if self.title_menu_index == 5:
+                    self.enemy_visible_option = not self.enemy_visible_option
             if pyxel.btnp(pyxel.KEY_U) and hasattr(self, "progression"):
                 upgraded = self.progression.try_upgrade_life()
                 self.shot_message = "upgrade life +1" if upgraded else "need 10 core"
@@ -620,6 +643,18 @@ class App:
                 self.shot_message = "base paddle +4" if upgraded else "need 10 core"
                 self.shot_message_timer = 120
             if pyxel.btnp(pyxel.KEY_RETURN) or pyxel.btnp(pyxel.KEY_SPACE):
+                if self.play_style_beginner or not self._tutorial_seen():
+                    self.state = GameState.TUTORIAL
+                else:
+                    self.state = GameState.PLAYING
+            return
+
+        if self.state == GameState.TUTORIAL:
+            if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.KEY_RETURN):
+                self.progression.mark_tutorial_seen()
+                self.state = GameState.PLAYING
+            if pyxel.btnp(pyxel.KEY_S):
+                self.progression.mark_tutorial_seen()
                 self.state = GameState.PLAYING
             return
 
@@ -699,14 +734,18 @@ class App:
             return
 
         self.stage_field.update_moving_block()
-        self.update_enemies()
+        if self._enemy_active():
+            self.update_enemies()
+        else:
+            self.enemies = []
         if self.state == GameState.GAME_OVER:
             self._grant_core_for_run_end()
             if self.last_report is None:
                 self._build_report()
             self._record_run_metric()
             return
-        self.resolve_ball_enemy_collisions()
+        if self._enemy_active():
+            self.resolve_ball_enemy_collisions()
         if self.stage_field.all_cleared():
             self.state = GameState.STAGE_CLEAR
             self.stage_clear_timer = STAGE_CLEAR_WAIT
@@ -759,7 +798,7 @@ class App:
                 self.draw_text(4, layout.top_sub_y, f"{self.selected_mode.value}/{self.selected_protocol.value}", 12)
                 self.draw_text(WIDTH - 74, layout.top_sub_y, self.current_phase.label[:8], 12)
 
-        draw_world = self.state not in (GameState.WAITING_START, GameState.TITLE)
+        draw_world = self.state not in (GameState.WAITING_START, GameState.TITLE, GameState.TUTORIAL)
         if draw_world:
             for row in range(BLOCK_ROWS):
                 for col in range(BLOCK_COLS):
@@ -815,22 +854,23 @@ class App:
                 else:
                     pyxel.rect(item.x - ITEM_SIZE // 2, item.y - ITEM_SIZE // 2, ITEM_SIZE, ITEM_SIZE, color)
 
-            for enemy in self.enemies:
-                color = 8
-                if enemy.type == EnemyType.SPLITTER:
-                    color = 14
-                if enemy.type == EnemyType.SNIPER_ORB:
-                    color = 11
-                if enemy.type == EnemyType.SHIELD_NODE:
-                    color = 2
-                if enemy.type == EnemyType.NULL_CORE_BOSS:
-                    color = 7
-                if self.use_sprite_assets:
-                    s = EnemySpriteAnimator.frame_for(enemy.type, pyxel.frame_count)
-                    pyxel.blt(int(enemy.x - s.w // 2), int(enemy.y - s.h // 2), 1, s.u, s.v, s.w, s.h, 1)
-                else:
-                    radius = 3 if enemy.type != EnemyType.NULL_CORE_BOSS else 6
-                    pyxel.circ(enemy.x, enemy.y, radius, color)
+            if self.enemy_visible_option:
+                for enemy in self.enemies:
+                    color = 8
+                    if enemy.type == EnemyType.SPLITTER:
+                        color = 14
+                    if enemy.type == EnemyType.SNIPER_ORB:
+                        color = 11
+                    if enemy.type == EnemyType.SHIELD_NODE:
+                        color = 2
+                    if enemy.type == EnemyType.NULL_CORE_BOSS:
+                        color = 7
+                    if self.use_sprite_assets:
+                        s = EnemySpriteAnimator.frame_for(enemy.type, pyxel.frame_count)
+                        pyxel.blt(int(enemy.x - s.w // 2), int(enemy.y - s.h // 2), 1, s.u, s.v, s.w, s.h, 1)
+                    else:
+                        radius = 3 if enemy.type != EnemyType.NULL_CORE_BOSS else 6
+                        pyxel.circ(enemy.x, enemy.y, radius, color)
 
             pyxel.rect(self.paddle_x, PADDLE_Y, self.paddle_w, PADDLE_H, 10)
             for ball in self.ball_system.balls:
@@ -842,11 +882,11 @@ class App:
                 self.danger_flash_timer -= 1
             if self._is_intro_fixed():
                 if self.blocks_broken_total < 5:
-                    self.draw_text(4, 30, "Goal1: break 5 blocks", 10)
+                    self.draw_text(4, 30, "もくひょう1:5こ壊す", 10, jp=True, small_jp=True)
                 elif self.items_collected_total < 1:
-                    self.draw_text(4, 30, "Goal2: get 1 item", 10)
+                    self.draw_text(4, 30, "もくひょう2:1こ取る", 10, jp=True, small_jp=True)
                 else:
-                    self.draw_text(4, 30, "Goal3: clear stage 1", 10)
+                    self.draw_text(4, 30, "もくひょう3:面クリア", 10, jp=True, small_jp=True)
 
         if layout.show_hud:
             self.draw_text(4, layout.upper_bottom_y, f"Score:{self.score}", 10)
@@ -900,19 +940,39 @@ class App:
                 pyxel.rectb(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 7)
             x = layout.panel_x + 10
             y = layout.panel_y + 8
-            self.draw_text(x, y, "PIT ARK BREAKER", 10)
-            cursor = [">", " ", " "]
+            self.draw_text(x, y, "ぶろっくくずし", 10, jp=True)
+            cursor = [">", " ", " ", " ", " ", " "]
             cursor[self.title_menu_index] = ">"
-            self.draw_text(x, y + 14, f"{cursor[0]} Start", 7)
-            self.draw_text(x, y + 26, f"{cursor[1]} Difficulty: {self.selected_mode.value}", 7)
-            self.draw_text(x, y + 38, f"{cursor[2]} Protocol: {self.selected_protocol.value}", 7)
-            self.draw_text(x, y + 54, "UP/DOWN: select", 12)
-            self.draw_text(x, y + 64, "LEFT/RIGHT: change", 12)
-            self.draw_text(x, y + 74, "ENTER/SPACE: start", 10)
-            self.draw_text(x, y + 88, "U/I/O: upgrades", 11)
+            style = "はじめて" if self.play_style_beginner else "ふつう"
+            enemy_opt = "ON" if self.enemy_enabled_option else "OFF"
+            enemy_view = "ON" if self.enemy_visible_option else "OFF"
+            self.draw_text(x, y + 14, f"{cursor[0]} すたーと", 7, jp=True)
+            self.draw_text(x, y + 24, f"{cursor[1]} 難易度:{self._mode_label_jp()}", 7, jp=True)
+            self.draw_text(x, y + 34, f"{cursor[2]} モード:{self._protocol_label_jp()}", 7, jp=True)
+            self.draw_text(x, y + 44, f"{cursor[3]} あそび:{style}", 7, jp=True)
+            self.draw_text(x, y + 54, f"{cursor[4]} 敵有効:{enemy_opt}", 7, jp=True)
+            self.draw_text(x, y + 64, f"{cursor[5]} 敵表示:{enemy_view}", 7, jp=True)
+            self.draw_text(x, y + 76, "↑↓:選択  ←→:変更", 12, jp=True)
+            self.draw_text(x, y + 86, "ENTER/SPACE:開始", 10, jp=True)
+            self.draw_text(x, y + 98, "U/I/O:強化", 11, jp=True)
             if hasattr(self, "progression"):
                 core = self.progression.state.core_shards
-                self.draw_text(x, y + 100, f"Core:{core}", 7)
+                self.draw_text(x + 112, y + 98, f"Core:{core}", 7)
+        if self.state == GameState.TUTORIAL:
+            if self.use_sprite_assets:
+                pyxel.blt(layout.panel_x, layout.panel_y, 2, 0, 0, layout.panel_w, layout.panel_h, 1)
+            else:
+                pyxel.rect(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 0)
+                pyxel.rectb(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 7)
+            x = layout.panel_x + 10
+            y = layout.panel_y + 8
+            self.draw_text(x, y, "ちゅーとりある", 10, jp=True)
+            self.draw_text(x, y + 14, "1) ひだり/みぎ で移動", 7, jp=True)
+            self.draw_text(x, y + 24, "2) 5こ 壊してみる", 7, jp=True)
+            self.draw_text(x, y + 34, "3) あいてむを1こ取る", 7, jp=True)
+            self.draw_text(x, y + 48, "はじめて: 敵はあとで出る", 12, jp=True)
+            self.draw_text(x, y + 60, "SPACE: はじめる", 10, jp=True)
+            self.draw_text(x, y + 70, "S:すきっぷ", 8, jp=True)
         if self.state == GameState.WAITING_START:
             if self.use_sprite_assets:
                 pyxel.blt(layout.panel_x, layout.panel_y, 2, 0, 0, layout.panel_w, layout.panel_h, 1)
@@ -921,10 +981,10 @@ class App:
                 pyxel.rectb(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 7)
             x = layout.panel_x + 10
             y = layout.panel_y + 8
-            self.draw_text(x, y, "READY", 10)
-            self.draw_text(x, y + 16, "SPACE: continue", 7)
-            self.draw_text(x, y + 28, "LEFT/RIGHT: move", 7)
-            self.draw_text(x, y + 40, "C: screenshot", 7)
+            self.draw_text(x, y, "じゅんびOK", 10, jp=True)
+            self.draw_text(x, y + 14, "SPACE:つづける", 7, jp=True, small_jp=True)
+            self.draw_text(x, y + 24, "ひだり/みぎ:いどう", 7, jp=True, small_jp=True)
+            self.draw_text(x, y + 34, "C:がめん保存", 7, jp=True, small_jp=True)
         if self.state == GameState.GAME_OVER:
             self.draw_text(51, 58, "GAME OVER", 8)
             self.draw_text(43, 68, "Press R to retry", 7)
