@@ -1,7 +1,8 @@
 import unittest
 from pathlib import Path
 
-from game.assets import AssetCatalog
+from game.assets import AssetCatalog, EnemySpriteAnimator, SpriteSheet
+from game.enums import EnemyType
 
 
 class AssetCatalogTests(unittest.TestCase):
@@ -28,6 +29,20 @@ class AssetCatalogTests(unittest.TestCase):
         self.assertEqual(catalog.stage_background_relative(1), "backgrounds/starfield_01.png")
         self.assertEqual(catalog.stage_background_relative(4), "backgrounds/starfield_04.png")
         self.assertEqual(catalog.stage_background_relative(5), "backgrounds/starfield_01.png")
+
+
+class EnemySpriteAnimatorTests(unittest.TestCase):
+    def test_non_boss_enemy_alternates_every_6_frames(self):
+        f0 = EnemySpriteAnimator.frame_for(EnemyType.DRONE, frame_count=0)
+        f1 = EnemySpriteAnimator.frame_for(EnemyType.DRONE, frame_count=7)
+        self.assertEqual(f0, SpriteSheet.ENEMY_DRONE_A)
+        self.assertEqual(f1, SpriteSheet.ENEMY_DRONE_B)
+
+    def test_boss_enemy_alternates_every_10_frames(self):
+        f0 = EnemySpriteAnimator.frame_for(EnemyType.NULL_CORE_BOSS, frame_count=0)
+        f1 = EnemySpriteAnimator.frame_for(EnemyType.NULL_CORE_BOSS, frame_count=11)
+        self.assertEqual(f0, SpriteSheet.ENEMY_BOSS_A)
+        self.assertEqual(f1, SpriteSheet.ENEMY_BOSS_B)
 
 
 if __name__ == "__main__":

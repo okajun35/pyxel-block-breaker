@@ -27,14 +27,28 @@ def gen_sheet(path: Path):
 
     img.circ(3, 19, 3, 8)
     img.circb(3, 19, 3, 7)
+    img.circ(3, 27, 3, 10)
+    img.circb(3, 27, 3, 7)
+
     img.circ(11, 19, 3, 14)
     img.circb(11, 19, 3, 7)
+    img.circ(11, 27, 3, 9)
+    img.circb(11, 27, 3, 7)
+
     img.circ(19, 19, 3, 11)
     img.circb(19, 19, 3, 7)
+    img.circ(19, 27, 3, 12)
+    img.circb(19, 27, 3, 7)
+
     img.circ(27, 19, 3, 2)
     img.circb(27, 19, 3, 7)
+    img.circ(27, 27, 3, 3)
+    img.circb(27, 27, 3, 7)
+
     img.circ(38, 21, 5, 7)
     img.circb(38, 21, 5, 8)
+    img.circ(54, 21, 5, 6)
+    img.circb(54, 21, 5, 8)
 
     path.parent.mkdir(parents=True, exist_ok=True)
     img.save(str(path), 1)

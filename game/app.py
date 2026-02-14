@@ -48,7 +48,7 @@ from game.enums import DifficultyMode, EnemyType, GameState, ItemType, ProtocolT
 from game.systems import BallSystem, EffectSystem, StageField
 from game.ui_layout import build_layout
 from game.progression import ProgressionStore
-from game.assets import AssetCatalog, SpriteSheet
+from game.assets import AssetCatalog, EnemySpriteAnimator, SpriteSheet
 
 
 class App:
@@ -128,17 +128,6 @@ class App:
             return
         rel = self.asset_catalog.stage_background_relative(stage)
         pyxel.images[0].load(0, 0, str(self.asset_catalog.asset_path(rel)))
-
-    def enemy_sprite(self, enemy_type: EnemyType):
-        if enemy_type == EnemyType.SPLITTER:
-            return SpriteSheet.ENEMY_SPLITTER
-        if enemy_type == EnemyType.SNIPER_ORB:
-            return SpriteSheet.ENEMY_SNIPER
-        if enemy_type == EnemyType.SHIELD_NODE:
-            return SpriteSheet.ENEMY_SHIELD
-        if enemy_type == EnemyType.NULL_CORE_BOSS:
-            return SpriteSheet.ENEMY_BOSS
-        return SpriteSheet.ENEMY_DRONE
 
     def draw_text(self, x, y, text, col, jp=False, small_jp=False):
         if jp:
@@ -654,7 +643,7 @@ class App:
                 if enemy.type == EnemyType.NULL_CORE_BOSS:
                     color = 7
                 if self.use_sprite_assets:
-                    s = self.enemy_sprite(enemy.type)
+                    s = EnemySpriteAnimator.frame_for(enemy.type, pyxel.frame_count)
                     pyxel.blt(int(enemy.x - s.w // 2), int(enemy.y - s.h // 2), 1, s.u, s.v, s.w, s.h, 1)
                 else:
                     radius = 3 if enemy.type != EnemyType.NULL_CORE_BOSS else 6

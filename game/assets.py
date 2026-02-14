@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from game.constants import ROOT_DIR
+from game.enums import EnemyType
 
 
 @dataclass(frozen=True)
@@ -49,8 +50,30 @@ class SpriteSheet:
     ITEM_S = SpriteRect(6, 8, 6, 6)
     ITEM_M = SpriteRect(12, 8, 6, 6)
     ITEM_F = SpriteRect(18, 8, 6, 6)
-    ENEMY_DRONE = SpriteRect(0, 16, 8, 8)
-    ENEMY_SPLITTER = SpriteRect(8, 16, 8, 8)
-    ENEMY_SNIPER = SpriteRect(16, 16, 8, 8)
-    ENEMY_SHIELD = SpriteRect(24, 16, 8, 8)
-    ENEMY_BOSS = SpriteRect(32, 16, 12, 12)
+    ENEMY_DRONE_A = SpriteRect(0, 16, 8, 8)
+    ENEMY_DRONE_B = SpriteRect(0, 24, 8, 8)
+    ENEMY_SPLITTER_A = SpriteRect(8, 16, 8, 8)
+    ENEMY_SPLITTER_B = SpriteRect(8, 24, 8, 8)
+    ENEMY_SNIPER_A = SpriteRect(16, 16, 8, 8)
+    ENEMY_SNIPER_B = SpriteRect(16, 24, 8, 8)
+    ENEMY_SHIELD_A = SpriteRect(24, 16, 8, 8)
+    ENEMY_SHIELD_B = SpriteRect(24, 24, 8, 8)
+    ENEMY_BOSS_A = SpriteRect(32, 16, 12, 12)
+    ENEMY_BOSS_B = SpriteRect(48, 16, 12, 12)
+
+
+class EnemySpriteAnimator:
+    @staticmethod
+    def frame_for(enemy_type: EnemyType, frame_count: int) -> SpriteRect:
+        if enemy_type == EnemyType.NULL_CORE_BOSS:
+            blink = (frame_count // 10) % 2
+            return SpriteSheet.ENEMY_BOSS_B if blink else SpriteSheet.ENEMY_BOSS_A
+
+        blink = (frame_count // 6) % 2
+        if enemy_type == EnemyType.SPLITTER:
+            return SpriteSheet.ENEMY_SPLITTER_B if blink else SpriteSheet.ENEMY_SPLITTER_A
+        if enemy_type == EnemyType.SNIPER_ORB:
+            return SpriteSheet.ENEMY_SNIPER_B if blink else SpriteSheet.ENEMY_SNIPER_A
+        if enemy_type == EnemyType.SHIELD_NODE:
+            return SpriteSheet.ENEMY_SHIELD_B if blink else SpriteSheet.ENEMY_SHIELD_A
+        return SpriteSheet.ENEMY_DRONE_B if blink else SpriteSheet.ENEMY_DRONE_A
