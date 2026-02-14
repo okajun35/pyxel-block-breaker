@@ -53,6 +53,7 @@ from game.automation import AutoRunConfig
 from game.effects import HitEffectSystem
 from game.audio import stage_music_pattern
 from game.run_report import build_run_report
+from game.tutorial import tutorial_lines, tutorial_page
 
 
 class App:
@@ -798,18 +799,18 @@ class App:
             x = layout.panel_x + 10
             y = layout.panel_y + 8
             self.draw_text(x, y, "あそびかた", 10, jp=True)
-            self.draw_text(x, y + 12, "1/2/3: むずかしさ", 7, jp=True, small_jp=True)
-            self.draw_text(x, y + 24, "TAB: モードきりかえ", 7, jp=True, small_jp=True)
-            self.draw_text(x, y + 36, "ひだり/みぎ: いどう", 7, jp=True, small_jp=True)
-            self.draw_text(x, y + 48, "W/S/M/F: アイテム", 7, jp=True, small_jp=True)
-            self.draw_text(x, y + 60, "SPACE: スタート", 10, jp=True, small_jp=True)
-            self.draw_text(x, y + 72, "C保存 U/I/O強化", 10, jp=True, small_jp=True)
+            self.draw_text(x, y + 12, "1/2/3: むずかしさ", 7, jp=True)
+            self.draw_text(x, y + 24, "ひだり/みぎ: いどう", 7, jp=True)
+            t_page = tutorial_page(pyxel.frame_count)
+            for i, line in enumerate(tutorial_lines(t_page)):
+                self.draw_text(x, y + 36 + i * 12, line, 12, jp=True)
+            self.draw_text(x, y + 84, "C:save U/I/O", 10)
             if hasattr(self, "progression"):
                 core = self.progression.state.core_shards
                 lv = self.progression.state.life_upgrade_level
                 cg = self.progression.state.core_gain_upgrade_level
                 pw = self.progression.state.paddle_upgrade_level
-                self.draw_text(x, y + 84, f"Core:{core} L:{lv} G:{cg} P:{pw}", 7)
+                self.draw_text(x, y + 96, f"Core:{core} L:{lv} G:{cg} P:{pw}", 7)
         if self.state == GameState.GAME_OVER:
             self.draw_text(51, 58, "GAME OVER", 8)
             self.draw_text(43, 68, "Press R to retry", 7)
