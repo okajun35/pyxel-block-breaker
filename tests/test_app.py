@@ -24,6 +24,14 @@ class DummyProgression:
     state = State()
 
 
+class DummyMetrics:
+    def __init__(self):
+        self.rows = []
+
+    def append(self, **kwargs):
+        self.rows.append(kwargs)
+
+
 class AppInitTests(unittest.TestCase):
     def test_reset_initializes_ball_speed_rate(self):
         app = App.__new__(App)
@@ -55,6 +63,26 @@ class AppInitTests(unittest.TestCase):
         app.progression = DummyProgression()
         self.assertEqual(App._core_gain_multiplier(app), 1.2)
         self.assertEqual(App._paddle_upgrade_bonus(app), 8)
+
+    def test_record_run_metric_once(self):
+        class Report:
+            time_sec = 10
+            score = 100
+            max_combo = 4
+            damage_taken = 2
+            cleared_phase = 1
+
+        app = App.__new__(App)
+        app.run_metric_recorded = False
+        app.metrics = DummyMetrics()
+        app.selected_mode = DifficultyMode.STANDARD
+        app.selected_protocol = ProtocolType.FUSION
+        app.last_report = Report()
+
+        App._record_run_metric(app)
+        App._record_run_metric(app)
+
+        self.assertEqual(len(app.metrics.rows), 1)
 
     def test_save_screenshot_creates_tmp_jp_png(self):
         app = App.__new__(App)

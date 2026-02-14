@@ -123,3 +123,6 @@ block_breaker.py
     - `PYXEL_AUTORUN=1` 自動プレイ有効
     - `PYXEL_AUTOCAP_FRAMES=30,90,150` キャプチャフレーム
     - `PYXEL_AUTOEXIT_FRAME=240` 自動終了フレーム
+- ラン統計レポート:
+  - `python tools/metrics_report.py`
+  - 入力: `tmp/run_metrics.jsonl`

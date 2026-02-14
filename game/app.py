@@ -35,6 +35,7 @@ from game.constants import (
     PADDLE_H,
     PADDLE_SPEED,
     PADDLE_Y,
+    METRICS_PATH,
     PROGRESSION_PATH,
     ROOT_DIR,
     STAGE_CLEAR_WAIT,
@@ -54,6 +55,7 @@ from game.effects import HitEffectSystem
 from game.audio import stage_music_pattern
 from game.run_report import build_run_report
 from game.tutorial import tutorial_lines, tutorial_page
+from game.metrics import MetricsStore
 
 
 class App:
@@ -69,6 +71,7 @@ class App:
         self.auto = AutoRunConfig.from_env(os.environ)
         self.auto_captured_frames: set[int] = set()
         self.progression = ProgressionStore(PROGRESSION_PATH)
+        self.metrics = MetricsStore(METRICS_PATH)
         self.asset_catalog = AssetCatalog()
         self.use_sprite_assets = False
         self.load_visual_assets()
@@ -192,6 +195,7 @@ class App:
         self.lives = base_lives
         self.stage = 1
         self.run_rewarded = False
+        self.run_metric_recorded = False
         self.damage_taken_total = 0
         self.max_combo = 0
         self.last_report = None
@@ -425,6 +429,22 @@ class App:
             score=self.score,
         )
 
+    def _record_run_metric(self):
+        if self.run_metric_recorded:
+            return
+        if self.last_report is None:
+            self._build_report()
+        self.metrics.append(
+            mode=self.selected_mode.value,
+            protocol=self.selected_protocol.value,
+            time_sec=self.last_report.time_sec,
+            score=self.last_report.score,
+            max_combo=self.last_report.max_combo,
+            damage=self.last_report.damage_taken,
+            phase=self.last_report.cleared_phase,
+        )
+        self.run_metric_recorded = True
+
     def play_stage_music(self):
         pyxel.stop(2)
         pyxel.play(2, stage_music_pattern(self.stage))
@@ -478,6 +498,8 @@ class App:
             self.paddle_x = max(0, min(WIDTH - self.paddle_w, self.paddle_x))
         self.auto_capture()
         if self.auto.exit_frame > 0 and pyxel.frame_count >= self.auto.exit_frame:
+            self._build_report()
+            self._record_run_metric()
             raise SystemExit
 
     def update(self):
@@ -496,6 +518,7 @@ class App:
             self._grant_core_for_run_end()
             if self.last_report is None:
                 self._build_report()
+            self._record_run_metric()
             return
 
         if self.state == GameState.STAGE_CLEAR:
@@ -604,6 +627,7 @@ class App:
                     self.play_se(7)
                     self._grant_core_for_run_end()
                     self._build_report()
+                    self._record_run_metric()
                     return
             self.play_se(5)
             self.respawn_ball()
@@ -615,6 +639,7 @@ class App:
             self._grant_core_for_run_end()
             if self.last_report is None:
                 self._build_report()
+            self._record_run_metric()
             return
         self.resolve_ball_enemy_collisions()
         if self.stage_field.all_cleared():

@@ -276,6 +276,7 @@
 - [x] 画像アセット本導入（敵/UI/背景）
 - [x] ラン外成長の拡張（Core獲得率/基礎バー幅）
 - [x] 終了評価表示（Time/MaxCombo/Damage/Phase）
+- [x] 成功指標向けランメトリクス記録（mode/protocol集計）
 3. Polish（1-2週間）
    - 難度曲線調整
    - 演出・SE最適化

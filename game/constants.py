@@ -3,6 +3,7 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parents[1]
 TMP_DIR = ROOT_DIR / "tmp"
 PROGRESSION_PATH = TMP_DIR / "progression.json"
+METRICS_PATH = TMP_DIR / "run_metrics.jsonl"
 
 WIDTH = 240
 HEIGHT = 180
