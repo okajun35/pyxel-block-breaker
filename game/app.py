@@ -51,7 +51,7 @@ class App:
         self.setup_audio()
         self.balance = BalanceConfig()
         self.ball_system = BallSystem()
-        self.effect_system = EffectSystem()
+        self.effect_system = EffectSystem(self.balance.item_effect_profiles)
         self.stage_field = StageField()
         self.reset()
         self.export_japanese_preview()

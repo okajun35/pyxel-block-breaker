@@ -64,7 +64,8 @@ class BallSystem:
 
 
 class EffectSystem:
-    def __init__(self):
+    def __init__(self, item_effect_profiles=None):
+        self.item_effect_profiles = item_effect_profiles or {}
         self.effect_wide_timer = 0
         self.effect_slow_timer = 0
         self.effect_fast_timer = 0
@@ -95,28 +96,54 @@ class EffectSystem:
     def on_respawn(self) -> None:
         self.start_slow_timer = START_SLOW_DURATION
 
+    def _max_level(self, item_type: ItemType, fallback: int) -> int:
+        profile = self.item_effect_profiles.get(item_type)
+        if profile:
+            return profile.max_level
+        return fallback
+
+    def _duration_frames(self, item_type: ItemType) -> int:
+        profile = self.item_effect_profiles.get(item_type)
+        if profile:
+            return profile.base_duration_sec * 60
+        return ITEM_DURATION
+
+    def _bonus_frames(self, item_type: ItemType) -> int:
+        profile = self.item_effect_profiles.get(item_type)
+        if profile:
+            return profile.same_item_bonus_sec * 60
+        return ITEM_BONUS_DURATION
+
     def apply_item(self, item_type: ItemType, ball_system: BallSystem) -> None:
         if item_type == ItemType.WIDE:
-            self.effect_wide_level = min(WIDE_LEVEL_MAX, self.effect_wide_level + 1)
+            self.effect_wide_level = min(
+                self._max_level(ItemType.WIDE, WIDE_LEVEL_MAX), self.effect_wide_level + 1
+            )
             if self.effect_wide_timer > 0:
-                self.effect_wide_timer += ITEM_BONUS_DURATION
+                self.effect_wide_timer += self._bonus_frames(ItemType.WIDE)
             else:
-                self.effect_wide_timer = ITEM_DURATION
+                self.effect_wide_timer = self._duration_frames(ItemType.WIDE)
         if item_type == ItemType.SLOW:
-            self.effect_slow_level = min(SLOW_LEVEL_MAX, self.effect_slow_level + 1)
+            self.effect_slow_level = min(
+                self._max_level(ItemType.SLOW, SLOW_LEVEL_MAX), self.effect_slow_level + 1
+            )
             if self.effect_slow_timer > 0:
-                self.effect_slow_timer += ITEM_BONUS_DURATION
+                self.effect_slow_timer += self._bonus_frames(ItemType.SLOW)
             else:
-                self.effect_slow_timer = ITEM_DURATION
+                self.effect_slow_timer = self._duration_frames(ItemType.SLOW)
         if item_type == ItemType.MULTI:
-            self.multi_level = min(3, self.multi_level + 1)
+            self.multi_level = min(
+                self._max_level(ItemType.MULTI, 3), self.multi_level + 1
+            )
             ball_system.add_balls(self.multi_level)
         if item_type == ItemType.FAST:
-            self.effect_fast_level = min(FAST_LEVEL_MAX, self.effect_fast_level + 1)
+            self.effect_fast_level = min(
+                self._max_level(ItemType.FAST, FAST_LEVEL_MAX), self.effect_fast_level + 1
+            )
             if self.effect_fast_timer > 0:
-                self.effect_fast_timer += ITEM_BONUS_DURATION
+                self.effect_fast_timer += self._bonus_frames(ItemType.FAST)
             else:
-                self.effect_fast_timer = ITEM_DURATION
+                self.effect_fast_timer = self._duration_frames(ItemType.FAST)
 
     def tick(self) -> tuple[int, float]:
         if self.effect_wide_timer > 0:

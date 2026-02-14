@@ -1,7 +1,7 @@
 import unittest
 
 from game.config import BalanceConfig
-from game.enums import DifficultyMode, ProtocolType
+from game.enums import DifficultyMode, ItemType, ProtocolType
 
 
 class ConfigTests(unittest.TestCase):
@@ -20,6 +20,14 @@ class ConfigTests(unittest.TestCase):
         p5 = cfg.get_phase_by_elapsed_sec(1700)
         self.assertEqual(p1.phase_id, 1)
         self.assertEqual(p5.phase_id, 5)
+
+    def test_item_effect_profiles_loaded(self):
+        cfg = BalanceConfig()
+        wide = cfg.item_effect_profiles[ItemType.WIDE]
+        fast = cfg.item_effect_profiles[ItemType.FAST]
+        self.assertEqual(wide.base_duration_sec, 8)
+        self.assertEqual(wide.same_item_bonus_sec, 10)
+        self.assertEqual(fast.stage_min, 2)
 
 
 if __name__ == "__main__":
