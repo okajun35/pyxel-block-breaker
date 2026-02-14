@@ -500,7 +500,7 @@ class App:
                 self.draw_text(4, layout.top_sub_y, f"{self.selected_mode.value}/{self.selected_protocol.value}", 12)
                 self.draw_text(WIDTH - 74, layout.top_sub_y, self.current_phase.label[:8], 12)
 
-        draw_world = not (self.state == GameState.WAITING_START and self.run_elapsed_frames == 0)
+        draw_world = self.state != GameState.WAITING_START
         if draw_world:
             for row in range(BLOCK_ROWS):
                 for col in range(BLOCK_COLS):
