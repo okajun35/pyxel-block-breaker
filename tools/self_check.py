@@ -21,18 +21,16 @@ from game.constants import (
 )
 
 def load_font_from_candidates(size: int):
-    try:
-        return pyxel.Font(JP_FONT_FALLBACK_PATH), f"bdf:{JP_FONT_FALLBACK_PATH}"
-    except Exception:
-        pass
-
     candidates = [*JP_FONT_SYSTEM_CANDIDATES, JP_FONT_PATH]
     for path in candidates:
         try:
             return pyxel.Font(path, size), f"ttf:{path}@{size}"
         except Exception:
             continue
-    raise RuntimeError("No usable JP font found")
+    try:
+        return pyxel.Font(JP_FONT_FALLBACK_PATH), f"bdf:{JP_FONT_FALLBACK_PATH}"
+    except Exception as e:
+        raise RuntimeError(f"No usable JP font found: {e}")
 
 
 def load_small_font():
@@ -44,21 +42,21 @@ def main():
     tmp.mkdir(parents=True, exist_ok=True)
 
     t0 = time.perf_counter()
-    font_main, font_main_name = load_font_from_candidates(JP_FONT_SIZE)
-    font_small, font_small_name = load_small_font()
+    font_main, font_main_name = load_font_from_candidates(12)
+    font_small, font_small_name = load_font_from_candidates(12)
     t1 = time.perf_counter()
 
     img = pyxel.Image(WIDTH, HEIGHT)
     img.cls(1)
-    img.rect(8, 28, 188, 96, 0)
-    img.rectb(8, 28, 188, 96, 7)
-    img.text(14, 36, "あそびかた", 10, font_main)
+    img.rect(8, 28, 188, 132, 0)
+    img.rectb(8, 28, 188, 132, 7)
+    img.text(14, 30, "あそびかた", 10, font_main)
     img.text(14, 48, "1/2/3: なんいど", 7, font_small)
-    img.text(14, 60, "TAB: るーるきりかえ", 7, font_small)
-    img.text(14, 72, "ひだり/みぎ: いどう", 7, font_small)
-    img.text(14, 84, "W/S/M/F: あいてむ", 7, font_small)
-    img.text(14, 96, "SPACE: はじめる", 10, font_small)
-    img.text(14, 108, "C: かめんほそん", 10, font_small)
+    img.text(14, 66, "TAB: るーるきりかえ", 7, font_small)
+    img.text(14, 84, "ひだり/みぎ: いどう", 7, font_small)
+    img.text(14, 102, "W/S/M/F: あいてむ", 7, font_small)
+    img.text(14, 120, "SPACE: はじめる", 10, font_small)
+    img.text(14, 138, "C: がめんほぞん", 10, font_small)
     img.save(str(tmp / "jp_selfcheck.png"), 1)
 
     ti0 = time.perf_counter()

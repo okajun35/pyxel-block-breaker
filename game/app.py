@@ -92,16 +92,15 @@ class App:
         yield JP_FONT_PATH
 
     def load_jp_font(self, size: int):
-        try:
-            # Prefer bundled BDF for stable pixel glyphs on Pyxel.
-            return pyxel.Font(JP_FONT_FALLBACK_PATH)
-        except Exception:
-            pass
         for path in self._font_candidates():
             try:
                 return pyxel.Font(path, size)
             except Exception:
                 continue
+        try:
+            return pyxel.Font(JP_FONT_FALLBACK_PATH)
+        except Exception:
+            pass
         return None
 
     def load_jp_small_font(self):
@@ -172,11 +171,11 @@ class App:
             x = START_PANEL_X + 10
             y = START_PANEL_Y + 20
             img.text(x, y, "1/2/3: なんいど", 7, self.jp_small_font)
-            img.text(x, y + 12, "TAB: もーどきりかえ", 7, self.jp_small_font)
-            img.text(x, y + 24, "ひだり/みぎ: いどう", 7, self.jp_small_font)
-            img.text(x, y + 36, "W/S/M/F: あいてむ", 7, self.jp_small_font)
-            img.text(x, y + 48, "SPACE: スタート", 10, self.jp_small_font)
-            img.text(x, y + 60, "C:ほぞん U:らいふ+", 10, self.jp_small_font)
+            img.text(x, y + 16, "TAB: もーどきりかえ", 7, self.jp_small_font)
+            img.text(x, y + 32, "ひだり/みぎ: いどう", 7, self.jp_small_font)
+            img.text(x, y + 48, "W/S/M/F: あいてむ", 7, self.jp_small_font)
+            img.text(x, y + 64, "SPACE: スタート", 10, self.jp_small_font)
+            img.text(x, y + 80, "C:ほぞん U:らいふ+", 10, self.jp_small_font)
         img.save(str(tmp_dir / "jp_preview.png"), 1)
 
     def reset(self):
@@ -990,40 +989,38 @@ class App:
             style = "はじめて" if self.play_style_beginner else "ふつう"
             enemy_opt = "ON" if self.enemy_enabled_option else "OFF"
             enemy_view = "ON" if self.enemy_visible_option else "OFF"
-            self.draw_text(x, y + 14, f"{cursor[0]} はしめる", 7, jp=True)
-            self.draw_text(x, y + 24, f"{cursor[1]} なんいど:{self._mode_label_jp()}", 7, jp=True)
-            self.draw_text(x, y + 34, f"{cursor[2]} るる:{self._protocol_label_jp()}", 7, jp=True)
-            self.draw_text(x, y + 44, f"{cursor[3]} あそび:{style}", 7, jp=True)
-            self.draw_text(x, y + 54, f"{cursor[4]} てき:{enemy_opt}", 7, jp=True)
-            self.draw_text(x, y + 64, f"{cursor[5]} てきみえる:{enemy_view}", 7, jp=True)
-            self.draw_text(x, y + 76, "U/D:えらぶ L/R:へんこう", 12, jp=True)
-            self.draw_text(x, y + 86, "ENTER/SPACE:START", 10, jp=True)
-            self.draw_text(x, y + 98, "U/I/O:きょうか", 11, jp=True)
-            self.draw_text(x + 96, y + 86, "1めん:てきなし", 6, jp=True, small_jp=True)
+            self.draw_text(x, y + 18, f"{cursor[0]} はじめる", 7, jp=True)
+            self.draw_text(x, y + 34, f"{cursor[1]} なんいど:{self._mode_label_jp()}", 7, jp=True)
+            self.draw_text(x, y + 50, f"{cursor[2]} るる:{self._protocol_label_jp()}", 7, jp=True)
+            self.draw_text(x, y + 66, f"{cursor[3]} あそび:{style}", 7, jp=True)
+            self.draw_text(x, y + 82, f"{cursor[4]} てき:{enemy_opt}", 7, jp=True)
+            self.draw_text(x, y + 98, f"{cursor[5]} てきみえる:{enemy_view}", 7, jp=True)
+            self.draw_text(x, y + 110, "U/D L/R: せってい", 12, jp=True)
+            self.draw_text(x, y + 124, "SPACE:START", 10, jp=True)
             if hasattr(self, "progression"):
                 core = self.progression.state.core_shards
-                self.draw_text(x + 112, y + 98, f"Core:{core}", 7)
+                self.draw_text(x + 132, y + 2, f"Core:{core}", 7)
         if self.state == GameState.TUTORIAL:
             pyxel.rect(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 0)
             pyxel.rectb(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 7)
             x = layout.panel_x + 10
             y = layout.panel_y + 8
             self.draw_text(x, y, "ちゆとりある", 10, jp=True)
-            self.draw_text(x, y + 14, "1) ひだり/みぎ で いどう", 7, jp=True)
-            self.draw_text(x, y + 24, "2) 5こ こわしてみる", 7, jp=True)
-            self.draw_text(x, y + 34, "3) あいてむを1こ とる", 7, jp=True)
-            self.draw_text(x, y + 48, "1めんは てきが でない", 12, jp=True)
-            self.draw_text(x, y + 60, "SPACE: はじめる", 10, jp=True)
-            self.draw_text(x, y + 70, "S: すきっぷ", 8, jp=True)
+            self.draw_text(x, y + 18, "1) ひだり/みぎ で いどう", 7, jp=True)
+            self.draw_text(x, y + 34, "2) 5こ こわしてみる", 7, jp=True)
+            self.draw_text(x, y + 50, "3) あいてむを1こ とる", 7, jp=True)
+            self.draw_text(x, y + 68, "1めんは てきが でない", 12, jp=True)
+            self.draw_text(x, y + 86, "SPACE: はじめる", 10, jp=True)
+            self.draw_text(x, y + 102, "S: すきっぷ", 8, jp=True)
         if self.state == GameState.WAITING_START:
             pyxel.rect(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 0)
             pyxel.rectb(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 7)
             x = layout.panel_x + 10
             y = layout.panel_y + 8
             self.draw_text(x, y, "じゅんびOK", 10, jp=True)
-            self.draw_text(x, y + 14, "SPACE:つづける", 7, jp=True, small_jp=True)
-            self.draw_text(x, y + 24, "ひだり/みぎ:いどう", 7, jp=True, small_jp=True)
-            self.draw_text(x, y + 34, "C:がめん保存", 7, jp=True, small_jp=True)
+            self.draw_text(x, y + 18, "SPACE:つづける", 7, jp=True, small_jp=True)
+            self.draw_text(x, y + 34, "ひだり/みぎ:いどう", 7, jp=True, small_jp=True)
+            self.draw_text(x, y + 50, "C:がめん保存", 7, jp=True, small_jp=True)
         if self.life_loss_modal_timer > 0:
             mx = START_PANEL_X + 14
             my = START_PANEL_Y + 24
@@ -1042,5 +1039,6 @@ class App:
                 self.draw_text(36, 90, f"MaxCombo:{self.last_report.max_combo}", 7)
                 self.draw_text(36, 100, f"Damage:{self.last_report.damage_taken}", 7)
                 self.draw_text(36, 110, f"Phase:{self.last_report.cleared_phase}", 7)
+            self.draw_text(36, 122, "Hint:", 12)
             for i, tip in enumerate(self.next_tips[:2]):
-                self.draw_text(126, 92 + i * 10, tip[:14], 12, jp=True, small_jp=True)
+                self.draw_text(36, 132 + i * 10, tip[:20], 12, jp=True, small_jp=True)

@@ -53,8 +53,8 @@ MOVING_BLOCK_H = BLOCK_H
 MOVING_BLOCK_Y = BLOCK_OFFSET_Y + (BLOCK_ROWS + 1) * (BLOCK_H + BLOCK_GAP)
 MOVING_BLOCK_SPEED = 0.8
 
-START_PANEL_W = 196
-START_PANEL_H = 116
+START_PANEL_W = 212
+START_PANEL_H = 152
 START_PANEL_X = (WIDTH - START_PANEL_W) // 2
 START_PANEL_Y = (HEIGHT - START_PANEL_H) // 2
 
@@ -62,11 +62,14 @@ START_LIVES = 3
 STAGE_CLEAR_WAIT = 90
 
 JP_FONT_PATH = str(ROOT_DIR / "assets/fonts/PixelMplus12-Regular.ttf")
+JP_FONT_DOT_PATH = str(ROOT_DIR / "assets/fonts/DotGothic16-Regular.ttf")
 JP_FONT_FALLBACK_PATH = str(ROOT_DIR / "assets/fonts/umplus_j12r.bdf")
-JP_FONT_SIZE = 12
+JP_FONT_SIZE = 14
 JP_SMALL_FONT_PATH = str(ROOT_DIR / "assets/fonts/umplus_j12r.bdf")
 JP_FONT_SYSTEM_CANDIDATES = [
+    JP_FONT_DOT_PATH,
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
     "/usr/share/fonts/opentype/ipafont-gothic/ipag.ttf",
     "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf",
+    JP_FONT_PATH,
 ]

@@ -13,7 +13,7 @@ class CoachingTests(unittest.TestCase):
     def test_suggest_combo_focus_when_combo_low(self):
         report = RunReport(time_sec=180, max_combo=1, damage_taken=1, cleared_phase=2, score=400)
         tips = suggest_next_actions(report, ["ball_drop"])
-        self.assertTrue(any("こんほ" in t for t in tips))
+        self.assertTrue(any("かくど" in t for t in tips))
 
 
 if __name__ == "__main__":

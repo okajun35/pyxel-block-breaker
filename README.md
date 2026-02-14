@@ -124,6 +124,7 @@ block_breaker.py
 - 日本語フォント描画の事前確認:
   - `python tools/self_check.py` を実行
   - `tmp/jp_selfcheck.png` で日本語表示を確認
+  - 通常は `assets/fonts/DotGothic16-Regular.ttf` を優先利用（失敗時はBDFへフォールバック）
 - スクリーンショット確認:
   - ゲーム中に `C` キー
   - `tmp/jp.png`（固定名）と `tmp/shot_*.png`（履歴）が更新される
