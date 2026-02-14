@@ -15,6 +15,13 @@ class DummyEffectSystem:
         return None
 
 
+class DummyProgression:
+    class State:
+        life_upgrade_level = 2
+
+    state = State()
+
+
 class AppInitTests(unittest.TestCase):
     def test_reset_initializes_ball_speed_rate(self):
         app = App.__new__(App)
@@ -27,6 +34,19 @@ class AppInitTests(unittest.TestCase):
         App.reset(app)
 
         self.assertEqual(app.ball_speed_rate, BASE_SPEED_RATE)
+
+    def test_reset_applies_life_upgrade_level(self):
+        app = App.__new__(App)
+        app.effect_system = DummyEffectSystem()
+        app.balance = BalanceConfig()
+        app.selected_mode = DifficultyMode.STANDARD
+        app.selected_protocol = ProtocolType.FUSION
+        app.progression = DummyProgression()
+        app.setup_stage = lambda: None
+
+        App.reset(app)
+
+        self.assertEqual(app.lives, 5)
 
     def test_save_screenshot_creates_tmp_jp_png(self):
         app = App.__new__(App)

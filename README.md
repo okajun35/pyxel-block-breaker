@@ -25,6 +25,7 @@ python block_breaker.py
 - `← / →`: バー移動
 - `H`: HUD詳細表示のON/OFF
 - `C`: スクリーンショット保存（`tmp/jp.png` と `tmp/shot_YYYYMMDD_HHMMSS.png`）
+- `U`: ラン外強化（開始画面のみ、Coreを10消費して最大ライフ+1）
 - `N`: ステージクリア後に次ステージへ進む
 - `R`: 最初からリセット
 
@@ -43,6 +44,12 @@ python block_breaker.py
 - `F` (Stage 2+): ボールが速くなる
 
 同じアイテムを連続で取ると効果レベルが上がり、効果時間も伸びます。
+
+## ラン外成長（Core Shard）
+
+- ステージクリア時とゲームオーバー時に `Core Shard` を獲得
+- `U` キーで最大ライフ強化（上限3）
+- 進捗は `tmp/progression.json` に保存
 
 ## 主要構成
 

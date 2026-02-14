@@ -2,6 +2,7 @@ from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 TMP_DIR = ROOT_DIR / "tmp"
+PROGRESSION_PATH = TMP_DIR / "progression.json"
 
 WIDTH = 240
 HEIGHT = 180

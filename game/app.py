@@ -35,6 +35,7 @@ from game.constants import (
     PADDLE_H,
     PADDLE_SPEED,
     PADDLE_Y,
+    PROGRESSION_PATH,
     ROOT_DIR,
     STAGE_CLEAR_WAIT,
     START_LIVES,
@@ -46,6 +47,7 @@ from game.entities import Enemy, FallingItem
 from game.enums import DifficultyMode, EnemyType, GameState, ItemType, ProtocolType
 from game.systems import BallSystem, EffectSystem, StageField
 from game.ui_layout import build_layout
+from game.progression import ProgressionStore
 
 
 class App:
@@ -58,6 +60,7 @@ class App:
         self.jp_small_font = self.load_jp_small_font()
         self.setup_audio()
         self.balance = BalanceConfig()
+        self.progression = ProgressionStore(PROGRESSION_PATH)
         self.ball_system = BallSystem()
         self.effect_system = EffectSystem(self.balance.item_effect_profiles)
         self.stage_field = StageField()
@@ -131,7 +134,7 @@ class App:
             img.text(x, y + 24, "ひだり/みぎ: いどう", 7, self.jp_small_font)
             img.text(x, y + 36, "W/S/M/F: アイテム", 7, self.jp_small_font)
             img.text(x, y + 48, "SPACE: スタート", 10, self.jp_small_font)
-            img.text(x, y + 60, "C: がめん保存", 10, self.jp_small_font)
+            img.text(x, y + 60, "C: 保存  U:ライフ強化", 10, self.jp_small_font)
         img.save(str(tmp_dir / "jp_preview.png"), 1)
 
     def reset(self):
@@ -146,8 +149,11 @@ class App:
         self.current_phase = self.balance.get_phase_by_elapsed_sec(0)
         difficulty = self.balance.get_difficulty(self.selected_mode)
         self.remaining_revives = difficulty.revive_count
-        self.lives = difficulty.base_lives
+        base_lives = difficulty.base_lives
+        base_lives += self._life_upgrade_level()
+        self.lives = base_lives
         self.stage = 1
+        self.run_rewarded = False
         self.state = GameState.WAITING_START
         self.stage_clear_timer = 0
         self.shot_message = ""
@@ -281,6 +287,7 @@ class App:
             else:
                 self.state = GameState.GAME_OVER
                 self.play_se(7)
+                self._grant_core_for_run_end()
 
     def update_enemies(self):
         elapsed_sec = self.run_elapsed_frames // 60
@@ -323,11 +330,31 @@ class App:
         self.enemies = [e for e in self.enemies if e.hp > 0]
 
     def next_stage(self):
+        self._grant_core_for_stage_clear()
         self.stage += 1
         self.stage_clear_timer = 0
         self.effect_system.reset_stage_effects()
         self.setup_stage()
         self.play_stage_music()
+
+    def _life_upgrade_level(self) -> int:
+        if not hasattr(self, "progression"):
+            return 0
+        return self.progression.state.life_upgrade_level
+
+    def _grant_core_for_stage_clear(self):
+        if not hasattr(self, "progression"):
+            return
+        self.progression.add_core(3 + min(3, self.stage))
+
+    def _grant_core_for_run_end(self):
+        if not hasattr(self, "progression"):
+            return
+        if self.run_rewarded:
+            return
+        gained = max(1, self.score // 200)
+        self.progression.add_core(gained)
+        self.run_rewarded = True
 
     def play_stage_music(self):
         pyxel.stop(2)
@@ -363,6 +390,7 @@ class App:
             self.shot_message_timer -= 1
 
         if self.state == GameState.GAME_OVER:
+            self._grant_core_for_run_end()
             return
 
         if self.state == GameState.STAGE_CLEAR:
@@ -376,17 +404,17 @@ class App:
                 if pyxel.btnp(pyxel.KEY_1):
                     self.selected_mode = DifficultyMode.STORY
                     difficulty = self.balance.get_difficulty(self.selected_mode)
-                    self.lives = difficulty.base_lives
+                    self.lives = difficulty.base_lives + self._life_upgrade_level()
                     self.remaining_revives = difficulty.revive_count
                 if pyxel.btnp(pyxel.KEY_2):
                     self.selected_mode = DifficultyMode.STANDARD
                     difficulty = self.balance.get_difficulty(self.selected_mode)
-                    self.lives = difficulty.base_lives
+                    self.lives = difficulty.base_lives + self._life_upgrade_level()
                     self.remaining_revives = difficulty.revive_count
                 if pyxel.btnp(pyxel.KEY_3):
                     self.selected_mode = DifficultyMode.HARDCORE
                     difficulty = self.balance.get_difficulty(self.selected_mode)
-                    self.lives = difficulty.base_lives
+                    self.lives = difficulty.base_lives + self._life_upgrade_level()
                     self.remaining_revives = difficulty.revive_count
                 if pyxel.btnp(pyxel.KEY_TAB):
                     if self.selected_protocol == ProtocolType.FUSION:
@@ -394,6 +422,10 @@ class App:
                     else:
                         self.selected_protocol = ProtocolType.FUSION
                     self.setup_stage()
+                if pyxel.btnp(pyxel.KEY_U) and hasattr(self, "progression"):
+                    upgraded = self.progression.try_upgrade_life()
+                    self.shot_message = "upgrade life +1" if upgraded else "need 10 core"
+                    self.shot_message_timer = 120
             if pyxel.btnp(pyxel.KEY_SPACE):
                 self.state = GameState.PLAYING
             return
@@ -456,6 +488,7 @@ class App:
                 else:
                     self.state = GameState.GAME_OVER
                     self.play_se(7)
+                    self._grant_core_for_run_end()
                     return
             self.play_se(5)
             self.respawn_ball()
@@ -464,6 +497,7 @@ class App:
         self.stage_field.update_moving_block()
         self.update_enemies()
         if self.state == GameState.GAME_OVER:
+            self._grant_core_for_run_end()
             return
         self.resolve_ball_enemy_collisions()
         if self.stage_field.all_cleared():
@@ -622,7 +656,11 @@ class App:
             self.draw_text(x, y + 36, "ひだり/みぎ: いどう", 7, jp=True, small_jp=True)
             self.draw_text(x, y + 48, "W/S/M/F: アイテム", 7, jp=True, small_jp=True)
             self.draw_text(x, y + 60, "SPACE: スタート", 10, jp=True, small_jp=True)
-            self.draw_text(x, y + 72, "C: がめん保存", 10, jp=True, small_jp=True)
+            self.draw_text(x, y + 72, "C: 保存  U:ライフ強化", 10, jp=True, small_jp=True)
+            if hasattr(self, "progression"):
+                core = self.progression.state.core_shards
+                lv = self.progression.state.life_upgrade_level
+                self.draw_text(x, y + 84, f"Core:{core} LifeLv:{lv}/3", 7)
         if self.state == GameState.GAME_OVER:
             self.draw_text(51, 58, "GAME OVER", 8)
             self.draw_text(43, 68, "Press R to retry", 7)
