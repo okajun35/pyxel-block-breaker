@@ -93,3 +93,8 @@ block_breaker.py
   - `python tools/self_check.py` でも `tmp/jp.png` を生成可能
 - 起動時間の計測:
   - `python tools/measure_startup.py`
+- 画像アセット再生成:
+  - `python tools/generate_assets.py`
+  - `assets/sprites/sheet.png`
+  - `assets/ui/panel_start.png`
+  - `assets/backgrounds/starfield.png`

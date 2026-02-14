@@ -48,6 +48,7 @@ from game.enums import DifficultyMode, EnemyType, GameState, ItemType, ProtocolT
 from game.systems import BallSystem, EffectSystem, StageField
 from game.ui_layout import build_layout
 from game.progression import ProgressionStore
+from game.assets import AssetCatalog, SpriteSheet
 
 
 class App:
@@ -61,6 +62,9 @@ class App:
         self.setup_audio()
         self.balance = BalanceConfig()
         self.progression = ProgressionStore(PROGRESSION_PATH)
+        self.asset_catalog = AssetCatalog()
+        self.use_sprite_assets = False
+        self.load_visual_assets()
         self.ball_system = BallSystem()
         self.effect_system = EffectSystem(self.balance.item_effect_profiles)
         self.stage_field = StageField()
@@ -102,6 +106,35 @@ class App:
         pyxel.sounds[5].set("c3b2a2", "p", "7", "f", 16) # miss life
         pyxel.sounds[6].set("c4g3e3c3", "p", "7", "f", 18)  # stage clear
         pyxel.sounds[7].set("a2f2d2c2", "p", "7", "f", 20)  # game over
+
+    def load_visual_assets(self):
+        if self.asset_catalog.missing_required_files():
+            self.use_sprite_assets = False
+            return
+        try:
+            pyxel.images[0].load(
+                0, 0, str(self.asset_catalog.asset_path("backgrounds/starfield.png"))
+            )
+            pyxel.images[1].load(
+                0, 0, str(self.asset_catalog.asset_path("sprites/sheet.png"))
+            )
+            pyxel.images[2].load(
+                0, 0, str(self.asset_catalog.asset_path("ui/panel_start.png"))
+            )
+            self.use_sprite_assets = True
+        except Exception:
+            self.use_sprite_assets = False
+
+    def enemy_sprite(self, enemy_type: EnemyType):
+        if enemy_type == EnemyType.SPLITTER:
+            return SpriteSheet.ENEMY_SPLITTER
+        if enemy_type == EnemyType.SNIPER_ORB:
+            return SpriteSheet.ENEMY_SNIPER
+        if enemy_type == EnemyType.SHIELD_NODE:
+            return SpriteSheet.ENEMY_SHIELD
+        if enemy_type == EnemyType.NULL_CORE_BOSS:
+            return SpriteSheet.ENEMY_BOSS
+        return SpriteSheet.ENEMY_DRONE
 
     def draw_text(self, x, y, text, col, jp=False, small_jp=False):
         if jp:
@@ -541,6 +574,8 @@ class App:
             self._startup_logged = True
 
         pyxel.cls(1)
+        if self.use_sprite_assets:
+            pyxel.blt(0, 0, 0, 0, 0, WIDTH, HEIGHT)
         if layout.show_hud:
             self.draw_text(4, layout.top_text_y, "LR Move  H HUD  C Shot", 7)
             if self.hud_detailed:
@@ -555,7 +590,11 @@ class App:
                         bx = BLOCK_OFFSET_X + col * (BLOCK_W + BLOCK_GAP)
                         by = BLOCK_OFFSET_Y + row * (BLOCK_H + BLOCK_GAP)
                         block_color = 2 if self.stage_field.block_hp[row][col] == 2 else 8 + row
-                        pyxel.rect(bx, by, BLOCK_W, BLOCK_H, block_color)
+                        if self.use_sprite_assets:
+                            sprite = SpriteSheet.BLOCK_HARD if self.stage_field.block_hp[row][col] == 2 else SpriteSheet.BLOCK_NORMAL
+                            pyxel.blt(bx, by, 1, sprite.u, sprite.v, sprite.w, sprite.h, 1)
+                        else:
+                            pyxel.rect(bx, by, BLOCK_W, BLOCK_H, block_color)
                         if self.stage_field.block_hp[row][col] == 2:
                             self.draw_text(bx + 1, by + 1, "2", 7)
                         item_type = self.stage_field.item_blocks[row][col]
@@ -570,7 +609,11 @@ class App:
 
             moving = self.stage_field.moving_block
             if moving.hp > 0:
-                pyxel.rect(moving.x, moving.y, MOVING_BLOCK_W, MOVING_BLOCK_H, 3)
+                if self.use_sprite_assets:
+                    s = SpriteSheet.MOVING_BLOCK
+                    pyxel.blt(int(moving.x), int(moving.y), 1, s.u, s.v, s.w, s.h, 1)
+                else:
+                    pyxel.rect(moving.x, moving.y, MOVING_BLOCK_W, MOVING_BLOCK_H, 3)
                 self.draw_text(moving.x + 6, moving.y + 1, "MV", 7)
                 if moving.hp == 2:
                     self.draw_text(moving.x + 1, moving.y + 1, "2", 7)
@@ -583,7 +626,17 @@ class App:
                     color = 14
                 if item.type == ItemType.FAST:
                     color = 8
-                pyxel.rect(item.x - ITEM_SIZE // 2, item.y - ITEM_SIZE // 2, ITEM_SIZE, ITEM_SIZE, color)
+                if self.use_sprite_assets:
+                    s = SpriteSheet.ITEM_W
+                    if item.type == ItemType.SLOW:
+                        s = SpriteSheet.ITEM_S
+                    if item.type == ItemType.MULTI:
+                        s = SpriteSheet.ITEM_M
+                    if item.type == ItemType.FAST:
+                        s = SpriteSheet.ITEM_F
+                    pyxel.blt(int(item.x - s.w // 2), int(item.y - s.h // 2), 1, s.u, s.v, s.w, s.h, 1)
+                else:
+                    pyxel.rect(item.x - ITEM_SIZE // 2, item.y - ITEM_SIZE // 2, ITEM_SIZE, ITEM_SIZE, color)
 
             for enemy in self.enemies:
                 color = 8
@@ -595,8 +648,12 @@ class App:
                     color = 2
                 if enemy.type == EnemyType.NULL_CORE_BOSS:
                     color = 7
-                radius = 3 if enemy.type != EnemyType.NULL_CORE_BOSS else 6
-                pyxel.circ(enemy.x, enemy.y, radius, color)
+                if self.use_sprite_assets:
+                    s = self.enemy_sprite(enemy.type)
+                    pyxel.blt(int(enemy.x - s.w // 2), int(enemy.y - s.h // 2), 1, s.u, s.v, s.w, s.h, 1)
+                else:
+                    radius = 3 if enemy.type != EnemyType.NULL_CORE_BOSS else 6
+                    pyxel.circ(enemy.x, enemy.y, radius, color)
 
             pyxel.rect(self.paddle_x, PADDLE_Y, self.paddle_w, PADDLE_H, 10)
             for ball in self.ball_system.balls:
@@ -646,8 +703,11 @@ class App:
             self.draw_text(43, 56, f"STAGE {self.stage} CLEAR!", 11)
             self.draw_text(28, 66, "Next: N or auto", 7)
         if self.state == GameState.WAITING_START:
-            pyxel.rect(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 0)
-            pyxel.rectb(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 7)
+            if self.use_sprite_assets:
+                pyxel.blt(layout.panel_x, layout.panel_y, 2, 0, 0, layout.panel_w, layout.panel_h, 1)
+            else:
+                pyxel.rect(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 0)
+                pyxel.rectb(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 7)
             x = layout.panel_x + 10
             y = layout.panel_y + 8
             self.draw_text(x, y, "あそびかた", 10, jp=True)
