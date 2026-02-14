@@ -49,14 +49,18 @@ def gen_panel(path: Path):
     img.save(str(path), 1)
 
 
-def gen_bg(path: Path):
+def gen_bg(path: Path, variant: int):
     img = pyxel.Image(240, 180)
-    img.cls(1)
+    base_col = [1, 5, 2, 0][(variant - 1) % 4]
+    line_col = [5, 6, 11, 13][(variant - 1) % 4]
+    star_col_a = [7, 10, 7, 6][(variant - 1) % 4]
+    star_col_b = [6, 7, 14, 12][(variant - 1) % 4]
+    img.cls(base_col)
     for x in range(0, 240, 24):
-        img.line(x, 0, x + 60, 179, 5)
+        img.line(x, 0, x + 60, 179, line_col)
     for y in range(6, 180, 24):
-        img.pset((y * 13) % 239, y, 7)
-        img.pset((y * 31) % 239, y // 2, 6)
+        img.pset((y * (11 + variant)) % 239, y, star_col_a)
+        img.pset((y * (19 + variant * 2)) % 239, y // 2, star_col_b)
     path.parent.mkdir(parents=True, exist_ok=True)
     img.save(str(path), 1)
 
@@ -64,11 +68,13 @@ def gen_bg(path: Path):
 def main():
     gen_sheet(ASSETS / "sprites/sheet.png")
     gen_panel(ASSETS / "ui/panel_start.png")
-    gen_bg(ASSETS / "backgrounds/starfield.png")
+    for idx in range(1, 5):
+        gen_bg(ASSETS / f"backgrounds/starfield_{idx:02d}.png", idx)
     print("generated assets:")
     print(ASSETS / "sprites/sheet.png")
     print(ASSETS / "ui/panel_start.png")
-    print(ASSETS / "backgrounds/starfield.png")
+    for idx in range(1, 5):
+        print(ASSETS / f"backgrounds/starfield_{idx:02d}.png")
 
 
 if __name__ == "__main__":

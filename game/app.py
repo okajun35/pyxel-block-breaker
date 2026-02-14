@@ -112,9 +112,6 @@ class App:
             self.use_sprite_assets = False
             return
         try:
-            pyxel.images[0].load(
-                0, 0, str(self.asset_catalog.asset_path("backgrounds/starfield.png"))
-            )
             pyxel.images[1].load(
                 0, 0, str(self.asset_catalog.asset_path("sprites/sheet.png"))
             )
@@ -122,8 +119,15 @@ class App:
                 0, 0, str(self.asset_catalog.asset_path("ui/panel_start.png"))
             )
             self.use_sprite_assets = True
+            self.load_stage_background(1)
         except Exception:
             self.use_sprite_assets = False
+
+    def load_stage_background(self, stage: int):
+        if not self.use_sprite_assets:
+            return
+        rel = self.asset_catalog.stage_background_relative(stage)
+        pyxel.images[0].load(0, 0, str(self.asset_catalog.asset_path(rel)))
 
     def enemy_sprite(self, enemy_type: EnemyType):
         if enemy_type == EnemyType.SPLITTER:
@@ -217,6 +221,7 @@ class App:
             phase_density_mul=self.current_phase.enemy_density_mul,
             phase_reward_mul=self.current_phase.event_weight_reward + 0.7,
         )
+        self.load_stage_background(self.stage)
         self.respawn_ball()
 
     def respawn_ball(self):

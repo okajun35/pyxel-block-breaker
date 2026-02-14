@@ -98,4 +98,4 @@ block_breaker.py
   - `python tools/generate_assets.py`
   - `assets/sprites/sheet.png`
   - `assets/ui/panel_start.png`
-  - `assets/backgrounds/starfield.png`
+  - `assets/backgrounds/starfield_01.png` 〜 `starfield_04.png`

@@ -20,10 +20,14 @@ class AssetCatalog:
         return self.root_dir / relative_path
 
     def required_files(self) -> list[str]:
+        backgrounds = [
+            f"backgrounds/starfield_{idx:02d}.png"
+            for idx in range(1, 5)
+        ]
         return [
             "sprites/sheet.png",
             "ui/panel_start.png",
-            "backgrounds/starfield.png",
+            *backgrounds,
         ]
 
     def missing_required_files(self) -> list[str]:
@@ -31,6 +35,10 @@ class AssetCatalog:
             rel for rel in self.required_files()
             if not self.asset_path(rel).exists()
         ]
+
+    def stage_background_relative(self, stage: int) -> str:
+        idx = ((max(1, stage) - 1) % 4) + 1
+        return f"backgrounds/starfield_{idx:02d}.png"
 
 
 class SpriteSheet:
