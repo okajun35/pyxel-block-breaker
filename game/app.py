@@ -606,7 +606,7 @@ class App:
                         8,
                     )
         if self.shot_message_timer > 0:
-            self.draw_text(4, layout.top_sub_y + 10, self.shot_message, 10)
+            self.draw_text(4, layout.toast_y, self.shot_message, 10)
 
         if self.state == GameState.STAGE_CLEAR:
             self.draw_text(43, 56, f"STAGE {self.stage} CLEAR!", 11)
