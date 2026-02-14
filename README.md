@@ -13,6 +13,12 @@ python block_breaker.py
 
 ## 操作方法
 
+- `1 / 2 / 3`: 難易度選択（開始前）
+  - `1: Story`
+  - `2: Standard`
+  - `3: Hardcore`
+- `TAB`: Protocol切替（開始前）
+  - `Fusion` / `Reflex`
 - `SPACE`: ゲーム開始（ステージ開始）
 - `← / →`: バー移動
 - `C`: スクリーンショット保存（`tmp/jp.png` と `tmp/shot_YYYYMMDD_HHMMSS.png`）
