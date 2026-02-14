@@ -21,14 +21,6 @@ from game.constants import (
     WIDTH,
 )
 
-
-def load_font(path: str, size: int):
-    try:
-        return pyxel.Font(path, size), f"ttf:{path}@{size}"
-    except Exception:
-        return pyxel.Font(JP_FONT_FALLBACK_PATH), f"bdf:{JP_FONT_FALLBACK_PATH}"
-
-
 def load_font_from_candidates(size: int):
     candidates = [JP_FONT_PATH, *JP_FONT_SYSTEM_CANDIDATES]
     for path in candidates:
