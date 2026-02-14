@@ -24,6 +24,10 @@ from game.constants import (
     JP_FONT_PATH,
     JP_SMALL_FONT_PATH,
     JP_FONT_SIZE,
+    START_PANEL_H,
+    START_PANEL_W,
+    START_PANEL_X,
+    START_PANEL_Y,
     MOVING_BLOCK_H,
     MOVING_BLOCK_W,
     PADDLE_H,
@@ -102,16 +106,18 @@ class App:
         tmp_dir.mkdir(parents=True, exist_ok=True)
         img = pyxel.Image(WIDTH, HEIGHT)
         img.cls(1)
-        img.rect(8, 28, 144, 72, 0)
-        img.rectb(8, 28, 144, 72, 7)
+        img.rect(START_PANEL_X, START_PANEL_Y, START_PANEL_W, START_PANEL_H, 0)
+        img.rectb(START_PANEL_X, START_PANEL_Y, START_PANEL_W, START_PANEL_H, 7)
         if self.jp_font is not None:
-            img.text(14, 36, "あそびかた", 10, self.jp_font)
+            img.text(START_PANEL_X + 10, START_PANEL_Y + 8, "あそびかた", 10, self.jp_font)
         if self.jp_small_font is not None:
-            img.text(14, 48, "ひだり/みぎ いどう", 7, self.jp_small_font)
-            img.text(14, 58, "ぜんぶこわして クリア", 7, self.jp_small_font)
-            img.text(14, 68, "W:バー  S:スロー", 7, self.jp_small_font)
-            img.text(14, 78, "M:+たま  F:はやい(2~)", 7, self.jp_small_font)
-            img.text(14, 90, "SPACE:スタート C:保存", 10, self.jp_small_font)
+            x = START_PANEL_X + 10
+            y = START_PANEL_Y + 20
+            img.text(x, y, "ひだり/みぎ いどう", 7, self.jp_small_font)
+            img.text(x, y + 10, "ぜんぶこわして クリア", 7, self.jp_small_font)
+            img.text(x, y + 20, "W:バー  S:スロー", 7, self.jp_small_font)
+            img.text(x, y + 30, "M:+たま  F:はやい(2~)", 7, self.jp_small_font)
+            img.text(x, y + 42, "SPACE:スタート C:保存", 10, self.jp_small_font)
         img.save(str(tmp_dir / "jp_preview.png"), 1)
 
     def reset(self):
@@ -491,8 +497,8 @@ class App:
             f"Hard:{self.stage_field.hard_count} Item:{self.stage_field.item_count}",
             5,
         )
-        self.draw_text(124, HEIGHT - 8, f"Stg:{self.stage}", 10)
-        self.draw_text(118, 20, self.current_phase.label[:5], 12)
+        self.draw_text(WIDTH - 50, HEIGHT - 8, f"Stg:{self.stage}", 10)
+        self.draw_text(WIDTH - 60, 20, self.current_phase.label[:5], 12)
         self.draw_text(4, 20, f"{self.selected_mode.value}/{self.selected_protocol.value}", 12)
 
         for row in range(BLOCK_ROWS):
@@ -549,10 +555,10 @@ class App:
             pyxel.circ(ball.x, ball.y, BALL_R, 7)
 
         self.draw_text(4, HEIGHT - 8, f"Balls:{len(self.ball_system.balls)}", 7)
-        self.draw_text(62, HEIGHT - 8, f"Life:{self.lives}", 8)
-        self.draw_text(100, HEIGHT - 8, f"Rv:{self.remaining_revives}", 14)
+        self.draw_text(72, HEIGHT - 8, f"Life:{self.lives}", 8)
+        self.draw_text(118, HEIGHT - 8, f"Rv:{self.remaining_revives}", 14)
         self.draw_text(4, HEIGHT - 24, f"Score:{self.score}", 10)
-        self.draw_text(86, HEIGHT - 24, f"Combo:{self.combo}", 6)
+        self.draw_text(90, HEIGHT - 24, f"Combo:{self.combo}", 6)
 
         if self.effect_system.effect_wide_timer > 0:
             self.draw_text(
@@ -570,7 +576,7 @@ class App:
             )
         if self.effect_system.effect_fast_timer > 0:
             self.draw_text(
-                132,
+                170,
                 HEIGHT - 32,
                 f"F{self.effect_system.effect_fast_level}:{self.effect_system.effect_fast_timer // 60}s",
                 8,
@@ -582,21 +588,23 @@ class App:
             self.draw_text(43, 56, f"STAGE {self.stage} CLEAR!", 11)
             self.draw_text(28, 66, "Next: N or auto", 7)
         if self.state == GameState.WAITING_START:
-            pyxel.rect(8, 28, 144, 72, 0)
-            pyxel.rectb(8, 28, 144, 72, 7)
-            self.draw_text(14, 36, "あそびかた", 10, jp=True)
+            pyxel.rect(START_PANEL_X, START_PANEL_Y, START_PANEL_W, START_PANEL_H, 0)
+            pyxel.rectb(START_PANEL_X, START_PANEL_Y, START_PANEL_W, START_PANEL_H, 7)
+            x = START_PANEL_X + 10
+            y = START_PANEL_Y + 8
+            self.draw_text(x, y, "あそびかた", 10, jp=True)
             if self.run_elapsed_frames == 0:
-                self.draw_text(14, 48, "1:Story 2:Std 3:Hard", 7)
-                self.draw_text(14, 58, f"Mode:{self.selected_mode.value}", 7)
-                self.draw_text(14, 68, f"Proto:{self.selected_protocol.value} (TAB)", 7)
-                self.draw_text(14, 78, "W/S/M/F items + SF phase", 7)
-                self.draw_text(14, 90, "SPACE:start  C:shot", 10)
+                self.draw_text(x, y + 12, "1:Story 2:Std 3:Hard", 7)
+                self.draw_text(x, y + 22, f"Mode:{self.selected_mode.value}", 7)
+                self.draw_text(x, y + 32, f"Proto:{self.selected_protocol.value} (TAB)", 7)
+                self.draw_text(x, y + 42, "W/S/M/F items + SF phase", 7)
+                self.draw_text(x, y + 54, "SPACE:start  C:shot", 10)
             else:
-                self.draw_text(14, 48, "ひだり/みぎ いどう", 7, jp=True, small_jp=True)
-                self.draw_text(14, 58, "ぜんぶこわして クリア", 7, jp=True, small_jp=True)
-                self.draw_text(14, 68, "W:バー  S:スロー", 7, jp=True, small_jp=True)
-                self.draw_text(14, 78, "M:+たま  F:はやい(2~)", 7, jp=True, small_jp=True)
-                self.draw_text(14, 90, "SPACE:スタート C:保存", 10, jp=True, small_jp=True)
+                self.draw_text(x, y + 12, "ひだり/みぎ いどう", 7, jp=True, small_jp=True)
+                self.draw_text(x, y + 22, "ぜんぶこわして クリア", 7, jp=True, small_jp=True)
+                self.draw_text(x, y + 32, "W:バー  S:スロー", 7, jp=True, small_jp=True)
+                self.draw_text(x, y + 42, "M:+たま  F:はやい(2~)", 7, jp=True, small_jp=True)
+                self.draw_text(x, y + 54, "SPACE:スタート C:保存", 10, jp=True, small_jp=True)
         if self.state == GameState.GAME_OVER:
             self.draw_text(51, 58, "GAME OVER", 8)
             self.draw_text(43, 68, "Press R to retry", 7)
