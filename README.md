@@ -145,3 +145,8 @@ block_breaker.py
 - ラン統計レポート:
   - `python tools/metrics_report.py`
   - 入力: `tmp/run_metrics.jsonl`
+
+## 開発メモ
+
+- 今日までの進捗と明日以降の計画:
+  - `docs/session_report_2026-02-14.md`
