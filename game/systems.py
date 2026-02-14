@@ -191,12 +191,14 @@ class StageField:
         item_spawn_mul: float = 1.0,
         phase_density_mul: float = 1.0,
         phase_reward_mul: float = 1.0,
+        moving_speed_mul: float = 1.0,
+        preferred_item: ItemType | None = None,
     ) -> None:
         self.block_hp = [[1 for _ in range(BLOCK_COLS)] for _ in range(BLOCK_ROWS)]
         self.item_blocks = [[None for _ in range(BLOCK_COLS)] for _ in range(BLOCK_ROWS)]
         self.apply_stage_layout(stage)
         moving_hp = min(6, max(1, int((1 + stage) * enemy_hp_mul)))
-        moving_speed = min(1.8, MOVING_BLOCK_SPEED + 0.1 * (stage - 1))
+        moving_speed = min(2.2, (MOVING_BLOCK_SPEED + 0.1 * (stage - 1)) * moving_speed_mul)
         self.moving_block = MovingBlock(
             x=80 - MOVING_BLOCK_W // 2,
             y=MOVING_BLOCK_Y,
@@ -215,7 +217,7 @@ class StageField:
             max(1, int(item_base * item_spawn_mul * phase_reward_mul)),
         )
         self.place_hard_blocks(self.hard_count)
-        self.place_item_blocks(self.item_count, stage)
+        self.place_item_blocks(self.item_count, stage, preferred_item)
 
     def apply_stage_layout(self, stage: int) -> None:
         pattern = stage % 4
@@ -263,7 +265,9 @@ class StageField:
             self.block_hp[row][col] = 2
             placed += 1
 
-    def place_item_blocks(self, target: int, stage: int) -> None:
+    def place_item_blocks(
+        self, target: int, stage: int, preferred_item: ItemType | None = None
+    ) -> None:
         candidates = self._active_cells()
         placed = 0
         while placed < target and candidates:
@@ -272,25 +276,28 @@ class StageField:
             if self.item_blocks[row][col] is not None:
                 continue
             max_roll = 3 if stage >= 2 else 2
-            item_roll = pyxel.rndi(0, max_roll)
-            if item_roll == 0:
-                self.item_blocks[row][col] = ItemType.WIDE
-            elif item_roll == 1:
-                self.item_blocks[row][col] = ItemType.SLOW
-            elif item_roll == 2:
-                self.item_blocks[row][col] = ItemType.MULTI
+            if preferred_item is not None and pyxel.rndi(0, 99) < 45:
+                self.item_blocks[row][col] = preferred_item
             else:
-                self.item_blocks[row][col] = ItemType.FAST
+                item_roll = pyxel.rndi(0, max_roll)
+                if item_roll == 0:
+                    self.item_blocks[row][col] = ItemType.WIDE
+                elif item_roll == 1:
+                    self.item_blocks[row][col] = ItemType.SLOW
+                elif item_roll == 2:
+                    self.item_blocks[row][col] = ItemType.MULTI
+                else:
+                    self.item_blocks[row][col] = ItemType.FAST
             placed += 1
 
-    def collide_ball(self, ball: Ball) -> tuple[bool, FallingItem | None]:
+    def collide_ball(self, ball: Ball) -> tuple[bool, FallingItem | None, bool]:
         if self.moving_block.hp > 0:
             mx = self.moving_block.x
             my = self.moving_block.y
             if mx <= ball.x <= mx + MOVING_BLOCK_W and my <= ball.y <= my + MOVING_BLOCK_H:
                 ball.vy *= -1
                 self.moving_block.hp -= 1
-                return True, None
+                return True, None, False
 
         for row in range(BLOCK_ROWS):
             for col in range(BLOCK_COLS):
@@ -309,9 +316,9 @@ class StageField:
                                 x=bx + BLOCK_W // 2,
                                 y=by + BLOCK_H // 2,
                                 type=item_type,
-                            )
-                    return True, None
-        return False, None
+                            ), True
+                    return True, None, True
+        return False, None, False
 
     def update_moving_block(self) -> None:
         if self.moving_block.hp == 0:

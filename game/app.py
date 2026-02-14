@@ -55,6 +55,8 @@ from game.effects import HitEffectSystem
 from game.audio import stage_music_pattern
 from game.run_report import build_run_report
 from game.metrics import MetricsStore
+from game.coaching import suggest_next_actions
+from game.stage_design import stage_role
 
 
 class App:
@@ -196,8 +198,14 @@ class App:
         self.run_rewarded = False
         self.run_metric_recorded = False
         self.damage_taken_total = 0
+        self.recent_damage_causes: list[str] = []
+        self.danger_flash_timer = 0
         self.max_combo = 0
         self.last_report = None
+        self.next_tips: list[str] = []
+        self.blocks_broken_total = 0
+        self.items_collected_total = 0
+        self.intro_spawn_index = 0
         self.state = GameState.WAITING_START
         self.stage_clear_timer = 0
         self.shot_message = ""
@@ -216,6 +224,7 @@ class App:
         self.state = GameState.TITLE
 
     def setup_stage(self):
+        self.stage_role = stage_role(self.stage)
         difficulty = self.balance.get_difficulty(self.selected_mode)
         protocol = self.balance.get_protocol(self.selected_protocol)
         elapsed_sec = self.run_elapsed_frames // 60
@@ -227,9 +236,13 @@ class App:
             self.stage,
             enemy_hp_mul=difficulty.enemy_hp_mul * protocol.enemy_hp_mul,
             item_spawn_mul=difficulty.drop_rate_mul * protocol.item_spawn_mul,
-            phase_density_mul=self.current_phase.enemy_density_mul,
+            phase_density_mul=self.current_phase.enemy_density_mul * self.stage_role.enemy_spawn_rate_mul,
             phase_reward_mul=self.current_phase.event_weight_reward + 0.7,
+            moving_speed_mul=self.stage_role.moving_speed_mul,
+            preferred_item=self.stage_role.preferred_item,
         )
+        if self.stage == 1:
+            self.stage_field.item_blocks[0][BLOCK_COLS // 2] = ItemType.WIDE
         self.load_stage_background(self.stage)
         self.respawn_ball()
 
@@ -240,22 +253,37 @@ class App:
         self.state = GameState.WAITING_START
 
     def _spawn_interval_frames(self) -> int:
-        density = max(0.2, self.current_phase.enemy_density_mul)
+        density = max(0.2, self.current_phase.enemy_density_mul * self.stage_role.enemy_spawn_rate_mul)
         base = int(90 / density)
         return max(15, base)
+
+    def _is_intro_fixed(self) -> bool:
+        return self.stage == 1 and self.run_elapsed_frames < 60 * 5
 
     def _spawn_enemy(self):
         elapsed_sec = self.run_elapsed_frames // 60
         self.current_phase = self.balance.get_phase_by_elapsed_sec(elapsed_sec)
-        r = pyxel.rndi(0, 99)
-        if r < 55:
-            enemy_type = EnemyType.DRONE
-        elif r < 75:
-            enemy_type = EnemyType.SPLITTER
-        elif r < 92:
-            enemy_type = EnemyType.SNIPER_ORB
+        if self._is_intro_fixed():
+            sequence = [
+                EnemyType.DRONE,
+                EnemyType.DRONE,
+                EnemyType.SPLITTER,
+                EnemyType.DRONE,
+                EnemyType.SNIPER_ORB,
+                EnemyType.SHIELD_NODE,
+            ]
+            enemy_type = sequence[self.intro_spawn_index % len(sequence)]
+            self.intro_spawn_index += 1
         else:
-            enemy_type = EnemyType.SHIELD_NODE
+            r = pyxel.rndi(0, 99)
+            if r < 55:
+                enemy_type = EnemyType.DRONE
+            elif r < 75:
+                enemy_type = EnemyType.SPLITTER
+            elif r < 92:
+                enemy_type = EnemyType.SNIPER_ORB
+            else:
+                enemy_type = EnemyType.SHIELD_NODE
 
         profile = self.balance.enemy_profiles[enemy_type]
         difficulty = self.balance.get_difficulty(self.selected_mode)
@@ -270,8 +298,13 @@ class App:
             hp *= 1.0 + (profile.hard_mode_extra_hp_pct / 100.0)
             speed *= 1.0 + (profile.hard_mode_extra_speed_pct / 100.0)
 
-        x = pyxel.rndi(10, WIDTH - 10)
-        vx = pyxel.rndf(-0.4, 0.4)
+        if self._is_intro_fixed():
+            fixed_x = [28, 52, 76, 100, 124, 148, 172, 196]
+            x = fixed_x[self.intro_spawn_index % len(fixed_x)]
+            vx = 0.22 if self.intro_spawn_index % 2 == 0 else -0.22
+        else:
+            x = pyxel.rndi(10, WIDTH - 10)
+            vx = pyxel.rndf(-0.4, 0.4)
         vy = 0.15 + speed * 0.08
         self.enemies.append(
             Enemy(
@@ -320,7 +353,12 @@ class App:
         combo_mul = 1.0 + min(self.combo, 20) * 0.05 * protocol.combo_score_mul
         return int(base * difficulty.score_mul * protocol.base_score_mul * combo_mul)
 
-    def _apply_enemy_damage(self, damage: int):
+    def _record_damage_cause(self, cause: str):
+        self.recent_damage_causes.append(cause)
+        if len(self.recent_damage_causes) > 6:
+            self.recent_damage_causes.pop(0)
+
+    def _apply_enemy_damage(self, damage: int, cause: str):
         difficulty = self.balance.get_difficulty(self.selected_mode)
         actual = max(1, math.ceil(damage * difficulty.enemy_damage_mul))
         elapsed_sec = self.run_elapsed_frames // 60
@@ -328,6 +366,7 @@ class App:
             actual = max(1, math.ceil(actual * 0.5))
         self.lives -= actual
         self.damage_taken_total += actual
+        self._record_damage_cause(cause)
         if self.lives <= 0:
             if self.remaining_revives > 0:
                 self.remaining_revives -= 1
@@ -353,11 +392,13 @@ class App:
             if enemy.x < 4 or enemy.x > WIDTH - 4:
                 enemy.vx *= -1
             if enemy.y >= PADDLE_Y:
-                self._apply_enemy_damage(enemy.damage)
+                self._apply_enemy_damage(enemy.damage, f"enemy_reach:{enemy.type.value}")
                 if self.state == GameState.GAME_OVER:
                     return
                 self.play_se(5)
                 continue
+            if enemy.y >= PADDLE_Y - 22:
+                self.danger_flash_timer = 8
             alive.append(enemy)
         self.enemies = alive
 
@@ -429,6 +470,7 @@ class App:
             cleared_phase=self.current_phase.phase_id,
             score=self.score,
         )
+        self.next_tips = suggest_next_actions(self.last_report, self.recent_damage_causes)
 
     def _record_run_metric(self):
         if self.run_metric_recorded:
@@ -626,18 +668,21 @@ class App:
                 ball.vx, ball.vy = self.ball_system.normalized_velocity(offset, -1.3)
                 self.play_se(2)
 
-            hit_block, spawned_item = self.stage_field.collide_ball(ball)
+            hit_block, spawned_item, destroyed = self.stage_field.collide_ball(ball)
             if hit_block:
                 self.play_se(3)
                 self.hit_fx.spawn_block_hit(ball.x, ball.y)
             if spawned_item:
                 self.items.append(spawned_item)
+            if destroyed:
+                self.blocks_broken_total += 1
 
             alive_balls.append(ball)
 
         self.ball_system.balls = alive_balls
         if not self.ball_system.balls:
             self.lives -= 1
+            self._record_damage_cause("ball_drop")
             if self.lives <= 0:
                 if self.remaining_revives > 0:
                     self.remaining_revives -= 1
@@ -683,6 +728,7 @@ class App:
                 and self.paddle_x <= item.x <= self.paddle_x + self.paddle_w
             ):
                 self.effect_system.apply_item(item.type, self.ball_system)
+                self.items_collected_total += 1
                 self.play_se(4)
                 continue
             if item.y > HEIGHT + ITEM_SIZE:
@@ -791,6 +837,16 @@ class App:
                 pyxel.circ(ball.x, ball.y, BALL_R, 7)
             for fx in self.hit_fx.effects:
                 pyxel.pset(int(fx.x), int(fx.y), fx.color)
+            if self.danger_flash_timer > 0:
+                pyxel.rect(0, PADDLE_Y - 2, WIDTH, 1, 8)
+                self.danger_flash_timer -= 1
+            if self._is_intro_fixed():
+                if self.blocks_broken_total < 5:
+                    self.draw_text(4, 30, "Goal1: break 5 blocks", 10)
+                elif self.items_collected_total < 1:
+                    self.draw_text(4, 30, "Goal2: get 1 item", 10)
+                else:
+                    self.draw_text(4, 30, "Goal3: clear stage 1", 10)
 
         if layout.show_hud:
             self.draw_text(4, layout.upper_bottom_y, f"Score:{self.score}", 10)
@@ -799,6 +855,7 @@ class App:
             self.draw_text(4, layout.bottom_y, f"Balls:{len(self.ball_system.balls)}", 7)
             self.draw_text(74, layout.bottom_y, f"Life:{self.lives}", 8)
             self.draw_text(124, layout.bottom_y, f"Rv:{self.remaining_revives}", 14)
+            self.draw_text(WIDTH - 110, layout.bottom_y, self.stage_role.label, 12)
             self.draw_text(WIDTH - 54, layout.bottom_y, f"Stg:{self.stage}", 10)
             if self.hud_detailed:
                 self.draw_text(
@@ -876,3 +933,5 @@ class App:
                 self.draw_text(36, 90, f"MaxCombo:{self.last_report.max_combo}", 7)
                 self.draw_text(36, 100, f"Damage:{self.last_report.damage_taken}", 7)
                 self.draw_text(36, 110, f"Phase:{self.last_report.cleared_phase}", 7)
+            for i, tip in enumerate(self.next_tips[:2]):
+                self.draw_text(126, 92 + i * 10, tip[:14], 12, jp=True, small_jp=True)

@@ -277,6 +277,9 @@
 - [x] ラン外成長の拡張（Core獲得率/基礎バー幅）
 - [x] 終了評価表示（Time/MaxCombo/Damage/Phase）
 - [x] 成功指標向けランメトリクス記録（mode/protocol集計）
+- [x] 序盤5分の固定導入（目標表示 + 敵出現半固定）
+- [x] 死因の見える化（警告ライン + 改善ヒント）
+- [x] ステージ役割差分（Intro/Evasion/Rush/Control）
 3. Polish（1-2週間）
    - 難度曲線調整
    - 演出・SE最適化
