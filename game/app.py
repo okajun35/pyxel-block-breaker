@@ -135,6 +135,7 @@ class App:
         self.items: list[FallingItem] = []
         self.enemies: list[Enemy] = []
         self.enemy_spawn_timer = 0
+        self.phase_boss_spawned = False
         self.score = 0
         self.combo = 0
         self.combo_timer = 0
@@ -148,6 +149,7 @@ class App:
         self.current_phase = self.balance.get_phase_by_elapsed_sec(elapsed_sec)
         self.enemies = []
         self.enemy_spawn_timer = 0
+        self.phase_boss_spawned = False
         self.stage_field.setup(
             self.stage,
             enemy_hp_mul=difficulty.enemy_hp_mul * protocol.enemy_hp_mul,
@@ -209,6 +211,28 @@ class App:
             )
         )
 
+    def _spawn_phase_boss(self):
+        if self.phase_boss_spawned:
+            return
+        if self.current_phase.phase_id < 5:
+            return
+        profile = self.balance.enemy_profiles[EnemyType.NULL_CORE_BOSS]
+        difficulty = self.balance.get_difficulty(self.selected_mode)
+        protocol = self.balance.get_protocol(self.selected_protocol)
+        hp = profile.base_hp * difficulty.enemy_hp_mul * protocol.enemy_hp_mul
+        self.enemies.append(
+            Enemy(
+                type=EnemyType.NULL_CORE_BOSS,
+                x=WIDTH // 2,
+                y=22,
+                vx=0.7,
+                vy=0.03,
+                hp=hp,
+                damage=profile.collision_damage,
+            )
+        )
+        self.phase_boss_spawned = True
+
     def _enemy_score(self, enemy_type: EnemyType) -> int:
         base = {
             EnemyType.DRONE: 30,
@@ -237,6 +261,9 @@ class App:
                 self.play_se(7)
 
     def update_enemies(self):
+        elapsed_sec = self.run_elapsed_frames // 60
+        self.current_phase = self.balance.get_phase_by_elapsed_sec(elapsed_sec)
+        self._spawn_phase_boss()
         self.enemy_spawn_timer -= 1
         if self.enemy_spawn_timer <= 0:
             self._spawn_enemy()
@@ -511,7 +538,10 @@ class App:
                 color = 11
             if enemy.type == EnemyType.SHIELD_NODE:
                 color = 2
-            pyxel.circ(enemy.x, enemy.y, 3, color)
+            if enemy.type == EnemyType.NULL_CORE_BOSS:
+                color = 7
+            radius = 3 if enemy.type != EnemyType.NULL_CORE_BOSS else 6
+            pyxel.circ(enemy.x, enemy.y, radius, color)
 
         pyxel.rect(self.paddle_x, PADDLE_Y, self.paddle_w, PADDLE_H, 10)
         for ball in self.ball_system.balls:
