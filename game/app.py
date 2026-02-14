@@ -50,6 +50,7 @@ from game.ui_layout import build_layout
 from game.progression import ProgressionStore
 from game.assets import AssetCatalog, EnemySpriteAnimator, SpriteSheet
 from game.automation import AutoRunConfig
+from game.effects import HitEffectSystem
 
 
 class App:
@@ -68,6 +69,7 @@ class App:
         self.asset_catalog = AssetCatalog()
         self.use_sprite_assets = False
         self.load_visual_assets()
+        self.hit_fx = HitEffectSystem()
         self.ball_system = BallSystem()
         self.effect_system = EffectSystem(self.balance.item_effect_profiles)
         self.stage_field = StageField()
@@ -352,10 +354,14 @@ class App:
                     continue
                 enemy.hp -= 25
                 ball.vy *= -1
+                self.hit_fx.spawn_block_hit(enemy.x, enemy.y)
                 if enemy.hp <= 0:
                     self.score += self._enemy_score(enemy.type)
                     self.combo += 1
                     self.combo_timer = 180
+                    self.hit_fx.spawn_enemy_hit(
+                        enemy.x, enemy.y, boss=(enemy.type == EnemyType.NULL_CORE_BOSS)
+                    )
                     self.play_se(3)
         self.enemies = [e for e in self.enemies if e.hp > 0]
 
@@ -537,6 +543,7 @@ class App:
             hit_block, spawned_item = self.stage_field.collide_ball(ball)
             if hit_block:
                 self.play_se(3)
+                self.hit_fx.spawn_block_hit(ball.x, ball.y)
             if spawned_item:
                 self.items.append(spawned_item)
 
@@ -573,6 +580,7 @@ class App:
         self.update_items()
         self.paddle_w, self.ball_speed_rate = self.effect_system.tick()
         self.paddle_x = max(0, min(WIDTH - self.paddle_w, self.paddle_x))
+        self.hit_fx.tick()
 
     def update_items(self):
         alive_items = []
@@ -689,6 +697,8 @@ class App:
             pyxel.rect(self.paddle_x, PADDLE_Y, self.paddle_w, PADDLE_H, 10)
             for ball in self.ball_system.balls:
                 pyxel.circ(ball.x, ball.y, BALL_R, 7)
+            for fx in self.hit_fx.effects:
+                pyxel.pset(int(fx.x), int(fx.y), fx.color)
 
         if layout.show_hud:
             self.draw_text(4, layout.upper_bottom_y, f"Score:{self.score}", 10)
