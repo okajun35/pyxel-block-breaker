@@ -24,3 +24,11 @@ class DifficultyMode(str, Enum):
 class ProtocolType(str, Enum):
     FUSION = "fusion"
     REFLEX = "reflex"
+
+
+class EnemyType(str, Enum):
+    DRONE = "drone"
+    SHIELD_NODE = "shield_node"
+    SPLITTER = "splitter"
+    SNIPER_ORB = "sniper_orb"
+    NULL_CORE_BOSS = "null_core_boss"

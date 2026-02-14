@@ -3,6 +3,7 @@ from pathlib import Path
 import time
 import shutil
 import os
+import math
 
 import pyxel
 
@@ -35,8 +36,8 @@ from game.constants import (
     WIDTH,
 )
 from game.config import BalanceConfig
-from game.entities import FallingItem
-from game.enums import DifficultyMode, GameState, ItemType, ProtocolType
+from game.entities import Enemy, FallingItem
+from game.enums import DifficultyMode, EnemyType, GameState, ItemType, ProtocolType
 from game.systems import BallSystem, EffectSystem, StageField
 
 
@@ -132,6 +133,11 @@ class App:
         self.shot_message = ""
         self.shot_message_timer = 0
         self.items: list[FallingItem] = []
+        self.enemies: list[Enemy] = []
+        self.enemy_spawn_timer = 0
+        self.score = 0
+        self.combo = 0
+        self.combo_timer = 0
         self.effect_system.reset_all()
         self.setup_stage()
 
@@ -140,6 +146,8 @@ class App:
         protocol = self.balance.get_protocol(self.selected_protocol)
         elapsed_sec = self.run_elapsed_frames // 60
         self.current_phase = self.balance.get_phase_by_elapsed_sec(elapsed_sec)
+        self.enemies = []
+        self.enemy_spawn_timer = 0
         self.stage_field.setup(
             self.stage,
             enemy_hp_mul=difficulty.enemy_hp_mul * protocol.enemy_hp_mul,
@@ -154,6 +162,113 @@ class App:
         self.effect_system.on_respawn()
         self.items = []
         self.state = GameState.WAITING_START
+
+    def _spawn_interval_frames(self) -> int:
+        density = max(0.2, self.current_phase.enemy_density_mul)
+        base = int(90 / density)
+        return max(15, base)
+
+    def _spawn_enemy(self):
+        elapsed_sec = self.run_elapsed_frames // 60
+        self.current_phase = self.balance.get_phase_by_elapsed_sec(elapsed_sec)
+        r = pyxel.rndi(0, 99)
+        if r < 55:
+            enemy_type = EnemyType.DRONE
+        elif r < 75:
+            enemy_type = EnemyType.SPLITTER
+        elif r < 92:
+            enemy_type = EnemyType.SNIPER_ORB
+        else:
+            enemy_type = EnemyType.SHIELD_NODE
+
+        profile = self.balance.enemy_profiles[enemy_type]
+        difficulty = self.balance.get_difficulty(self.selected_mode)
+        protocol = self.balance.get_protocol(self.selected_protocol)
+        phase_index = max(0, self.current_phase.phase_id - 1)
+
+        hp_mul = (1.0 + phase_index * (profile.phase_hp_gain_pct / 100.0))
+        speed_mul = (1.0 + phase_index * (profile.phase_speed_gain_pct / 100.0))
+        hp = profile.base_hp * hp_mul * difficulty.enemy_hp_mul * protocol.enemy_hp_mul
+        speed = profile.base_speed * speed_mul
+        if self.selected_mode == DifficultyMode.HARDCORE:
+            hp *= 1.0 + (profile.hard_mode_extra_hp_pct / 100.0)
+            speed *= 1.0 + (profile.hard_mode_extra_speed_pct / 100.0)
+
+        x = pyxel.rndi(10, WIDTH - 10)
+        vx = pyxel.rndf(-0.4, 0.4)
+        vy = 0.15 + speed * 0.08
+        self.enemies.append(
+            Enemy(
+                type=enemy_type,
+                x=x,
+                y=18,
+                vx=vx,
+                vy=vy,
+                hp=hp,
+                damage=profile.collision_damage,
+            )
+        )
+
+    def _enemy_score(self, enemy_type: EnemyType) -> int:
+        base = {
+            EnemyType.DRONE: 30,
+            EnemyType.SPLITTER: 45,
+            EnemyType.SNIPER_ORB: 55,
+            EnemyType.SHIELD_NODE: 70,
+            EnemyType.NULL_CORE_BOSS: 300,
+        }[enemy_type]
+        difficulty = self.balance.get_difficulty(self.selected_mode)
+        protocol = self.balance.get_protocol(self.selected_protocol)
+        return int(base * difficulty.score_mul * protocol.base_score_mul)
+
+    def _apply_enemy_damage(self, damage: int):
+        difficulty = self.balance.get_difficulty(self.selected_mode)
+        actual = max(1, math.ceil(damage * difficulty.enemy_damage_mul))
+        self.lives -= actual
+        if self.lives <= 0:
+            if self.remaining_revives > 0:
+                self.remaining_revives -= 1
+                self.lives = 1
+            else:
+                self.state = GameState.GAME_OVER
+                self.play_se(7)
+
+    def update_enemies(self):
+        self.enemy_spawn_timer -= 1
+        if self.enemy_spawn_timer <= 0:
+            self._spawn_enemy()
+            self.enemy_spawn_timer = self._spawn_interval_frames()
+
+        alive = []
+        for enemy in self.enemies:
+            enemy.x += enemy.vx
+            enemy.y += enemy.vy
+            if enemy.x < 4 or enemy.x > WIDTH - 4:
+                enemy.vx *= -1
+            if enemy.y >= PADDLE_Y:
+                self._apply_enemy_damage(enemy.damage)
+                if self.state == GameState.GAME_OVER:
+                    return
+                self.play_se(5)
+                continue
+            alive.append(enemy)
+        self.enemies = alive
+
+    def resolve_ball_enemy_collisions(self):
+        for ball in self.ball_system.balls:
+            for enemy in self.enemies:
+                dx = ball.x - enemy.x
+                dy = ball.y - enemy.y
+                if dx * dx + dy * dy > 25:
+                    continue
+                enemy.hp -= 25
+                ball.vy *= -1
+                if enemy.hp <= 0:
+                    self.score += self._enemy_score(enemy.type)
+                    self.combo += 1
+                    self.combo_timer = 180
+                    self.play_se(3)
+        self.enemies = [e for e in self.enemies if e.hp > 0]
 
     def next_stage(self):
         self.stage += 1
@@ -229,6 +344,11 @@ class App:
                 self.state = GameState.PLAYING
             return
 
+        if self.combo_timer > 0:
+            self.combo_timer -= 1
+        else:
+            self.combo = 0
+
         if pyxel.btn(pyxel.KEY_LEFT):
             self.paddle_x -= PADDLE_SPEED
         if pyxel.btn(pyxel.KEY_RIGHT):
@@ -281,6 +401,10 @@ class App:
             return
 
         self.stage_field.update_moving_block()
+        self.update_enemies()
+        if self.state == GameState.GAME_OVER:
+            return
+        self.resolve_ball_enemy_collisions()
         if self.stage_field.all_cleared():
             self.state = GameState.STAGE_CLEAR
             self.stage_clear_timer = STAGE_CLEAR_WAIT
@@ -368,6 +492,16 @@ class App:
                 color = 8
             pyxel.rect(item.x - ITEM_SIZE // 2, item.y - ITEM_SIZE // 2, ITEM_SIZE, ITEM_SIZE, color)
 
+        for enemy in self.enemies:
+            color = 8
+            if enemy.type == EnemyType.SPLITTER:
+                color = 14
+            if enemy.type == EnemyType.SNIPER_ORB:
+                color = 11
+            if enemy.type == EnemyType.SHIELD_NODE:
+                color = 2
+            pyxel.circ(enemy.x, enemy.y, 3, color)
+
         pyxel.rect(self.paddle_x, PADDLE_Y, self.paddle_w, PADDLE_H, 10)
         for ball in self.ball_system.balls:
             pyxel.circ(ball.x, ball.y, BALL_R, 7)
@@ -375,25 +509,27 @@ class App:
         self.draw_text(4, HEIGHT - 8, f"Balls:{len(self.ball_system.balls)}", 7)
         self.draw_text(62, HEIGHT - 8, f"Life:{self.lives}", 8)
         self.draw_text(100, HEIGHT - 8, f"Rv:{self.remaining_revives}", 14)
+        self.draw_text(4, HEIGHT - 24, f"Score:{self.score}", 10)
+        self.draw_text(86, HEIGHT - 24, f"Combo:{self.combo}", 6)
 
         if self.effect_system.effect_wide_timer > 0:
             self.draw_text(
                 40,
-                HEIGHT - 24,
+                HEIGHT - 32,
                 f"W{self.effect_system.effect_wide_level}:{self.effect_system.effect_wide_timer // 60}s",
                 9,
             )
         if self.effect_system.effect_slow_timer > 0:
             self.draw_text(
                 86,
-                HEIGHT - 24,
+                HEIGHT - 32,
                 f"S{self.effect_system.effect_slow_level}:{self.effect_system.effect_slow_timer // 60}s",
                 11,
             )
         if self.effect_system.effect_fast_timer > 0:
             self.draw_text(
                 132,
-                HEIGHT - 24,
+                HEIGHT - 32,
                 f"F{self.effect_system.effect_fast_level}:{self.effect_system.effect_fast_timer // 60}s",
                 8,
             )

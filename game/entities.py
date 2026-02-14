@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from game.enums import ItemType
+from game.enums import EnemyType, ItemType
 
 
 @dataclass
@@ -24,3 +24,14 @@ class MovingBlock:
     y: float
     vx: float
     hp: int
+
+
+@dataclass
+class Enemy:
+    type: EnemyType
+    x: float
+    y: float
+    vx: float
+    vy: float
+    hp: float
+    damage: int

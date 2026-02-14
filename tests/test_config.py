@@ -1,7 +1,7 @@
 import unittest
 
 from game.config import BalanceConfig
-from game.enums import DifficultyMode, ItemType, ProtocolType
+from game.enums import DifficultyMode, EnemyType, ItemType, ProtocolType
 
 
 class ConfigTests(unittest.TestCase):
@@ -28,6 +28,13 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(wide.base_duration_sec, 8)
         self.assertEqual(wide.same_item_bonus_sec, 10)
         self.assertEqual(fast.stage_min, 2)
+
+    def test_enemy_profiles_loaded(self):
+        cfg = BalanceConfig()
+        drone = cfg.enemy_profiles[EnemyType.DRONE]
+        boss = cfg.enemy_profiles[EnemyType.NULL_CORE_BOSS]
+        self.assertEqual(drone.base_hp, 30)
+        self.assertEqual(boss.collision_damage, 2)
 
 
 if __name__ == "__main__":

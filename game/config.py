@@ -2,8 +2,7 @@ from dataclasses import dataclass
 import csv
 
 from game.constants import ROOT_DIR
-from game.enums import DifficultyMode, ProtocolType
-from game.enums import ItemType
+from game.enums import DifficultyMode, EnemyType, ItemType, ProtocolType
 
 
 @dataclass(frozen=True)
@@ -58,12 +57,25 @@ class ItemEffectProfile:
     stage_min: int
 
 
+@dataclass(frozen=True)
+class EnemyProfile:
+    enemy_id: EnemyType
+    base_hp: int
+    base_speed: float
+    collision_damage: int
+    phase_hp_gain_pct: float
+    phase_speed_gain_pct: float
+    hard_mode_extra_hp_pct: float
+    hard_mode_extra_speed_pct: float
+
+
 class BalanceConfig:
     def __init__(self):
         self.difficulty_profiles = self._load_difficulty_profiles()
         self.protocol_profiles = self._load_protocol_profiles()
         self.run_phases = self._load_run_phases()
         self.item_effect_profiles = self._load_item_effect_profiles()
+        self.enemy_profiles = self._load_enemy_profiles()
 
     def _load_difficulty_profiles(self) -> dict[DifficultyMode, DifficultyProfile]:
         path = ROOT_DIR / "docs/tables/difficulty_modes.csv"
@@ -145,6 +157,24 @@ class BalanceConfig:
                     lvl2_bonus=row["lvl2_bonus"],
                     lvl3_bonus=row["lvl3_bonus"],
                     stage_min=int(row["stage_min"]),
+                )
+        return profiles
+
+    def _load_enemy_profiles(self) -> dict[EnemyType, EnemyProfile]:
+        path = ROOT_DIR / "docs/tables/enemy_scaling.csv"
+        profiles: dict[EnemyType, EnemyProfile] = {}
+        with path.open(encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                enemy_type = EnemyType(row["enemy_id"])
+                profiles[enemy_type] = EnemyProfile(
+                    enemy_id=enemy_type,
+                    base_hp=int(row["base_hp"]),
+                    base_speed=float(row["base_speed"]),
+                    collision_damage=int(row["collision_damage"]),
+                    phase_hp_gain_pct=float(row["phase_hp_gain_pct"]),
+                    phase_speed_gain_pct=float(row["phase_speed_gain_pct"]),
+                    hard_mode_extra_hp_pct=float(row["hard_mode_extra_hp_pct"]),
+                    hard_mode_extra_speed_pct=float(row["hard_mode_extra_speed_pct"]),
                 )
         return profiles
 
