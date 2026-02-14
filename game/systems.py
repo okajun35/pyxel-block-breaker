@@ -31,6 +31,7 @@ from game.constants import (
     SLOW_LEVEL_MAX,
     START_SLOW_DURATION,
     START_SLOW_RATE,
+    WIDTH,
     WIDE_LEVEL_MAX,
 )
 from game.entities import Ball, FallingItem, MovingBlock
@@ -193,6 +194,7 @@ class StageField:
     ) -> None:
         self.block_hp = [[1 for _ in range(BLOCK_COLS)] for _ in range(BLOCK_ROWS)]
         self.item_blocks = [[None for _ in range(BLOCK_COLS)] for _ in range(BLOCK_ROWS)]
+        self.apply_stage_layout(stage)
         moving_hp = min(6, max(1, int((1 + stage) * enemy_hp_mul)))
         moving_speed = min(1.8, MOVING_BLOCK_SPEED + 0.1 * (stage - 1))
         self.moving_block = MovingBlock(
@@ -201,7 +203,7 @@ class StageField:
             vx=moving_speed,
             hp=moving_hp,
         )
-        total_blocks = BLOCK_ROWS * BLOCK_COLS
+        total_blocks = sum(1 for row in self.block_hp for hp in row if hp > 0)
         hard_base = HARD_BLOCK_COUNT + (stage - 1) * HARD_BLOCK_INC_PER_STAGE
         item_base = ITEM_BLOCK_COUNT + (stage - 1) * ITEM_BLOCK_INC_PER_STAGE
         self.hard_count = min(
@@ -215,21 +217,58 @@ class StageField:
         self.place_hard_blocks(self.hard_count)
         self.place_item_blocks(self.item_count, stage)
 
+    def apply_stage_layout(self, stage: int) -> None:
+        pattern = stage % 4
+        if pattern == 1:
+            return
+        if pattern == 2:
+            for row in range(BLOCK_ROWS):
+                if row % 2 == 1:
+                    for col in range(1, BLOCK_COLS, 2):
+                        self.block_hp[row][col] = 0
+            return
+        if pattern == 3:
+            for row in range(BLOCK_ROWS):
+                for col in range(BLOCK_COLS):
+                    if (row + col) % 3 == 1:
+                        self.block_hp[row][col] = 0
+            return
+        for row in range(1, BLOCK_ROWS - 1):
+            for col in range(2, BLOCK_COLS - 2):
+                if (row + col) % 2 == 0:
+                    self.block_hp[row][col] = 0
+
+    def _active_cells(self) -> list[tuple[int, int]]:
+        if len(self.block_hp) != BLOCK_ROWS or any(len(row) != BLOCK_COLS for row in self.block_hp):
+            return [
+                (row, col)
+                for row in range(BLOCK_ROWS)
+                for col in range(BLOCK_COLS)
+            ]
+        return [
+            (row, col)
+            for row in range(BLOCK_ROWS)
+            for col in range(BLOCK_COLS)
+            if self.block_hp[row][col] > 0
+        ]
+
     def place_hard_blocks(self, target: int) -> None:
+        candidates = [
+            (row, col) for row, col in self._active_cells() if self.block_hp[row][col] == 1
+        ]
         placed = 0
-        while placed < target:
-            row = pyxel.rndi(0, BLOCK_ROWS - 1)
-            col = pyxel.rndi(0, BLOCK_COLS - 1)
-            if self.block_hp[row][col] == 2:
-                continue
+        while placed < target and candidates:
+            idx = pyxel.rndi(0, len(candidates) - 1)
+            row, col = candidates.pop(idx)
             self.block_hp[row][col] = 2
             placed += 1
 
     def place_item_blocks(self, target: int, stage: int) -> None:
+        candidates = self._active_cells()
         placed = 0
-        while placed < target:
-            row = pyxel.rndi(0, BLOCK_ROWS - 1)
-            col = pyxel.rndi(0, BLOCK_COLS - 1)
+        while placed < target and candidates:
+            idx = pyxel.rndi(0, len(candidates) - 1)
+            row, col = candidates.pop(idx)
             if self.item_blocks[row][col] is not None:
                 continue
             max_roll = 3 if stage >= 2 else 2
@@ -281,8 +320,8 @@ class StageField:
         if self.moving_block.x <= 0:
             self.moving_block.x = 0
             self.moving_block.vx *= -1
-        if self.moving_block.x >= 160 - MOVING_BLOCK_W:
-            self.moving_block.x = 160 - MOVING_BLOCK_W
+        if self.moving_block.x >= WIDTH - MOVING_BLOCK_W:
+            self.moving_block.x = WIDTH - MOVING_BLOCK_W
             self.moving_block.vx *= -1
 
     def all_cleared(self) -> bool:
