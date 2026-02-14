@@ -43,6 +43,7 @@ from game.config import BalanceConfig
 from game.entities import Enemy, FallingItem
 from game.enums import DifficultyMode, EnemyType, GameState, ItemType, ProtocolType
 from game.systems import BallSystem, EffectSystem, StageField
+from game.ui_layout import build_layout
 
 
 class App:
@@ -476,6 +477,7 @@ class App:
         self.items = alive_items
 
     def draw(self):
+        layout = build_layout(self.state)
         if not self._startup_logged:
             elapsed = time.perf_counter() - self._startup_t0
             tmp_dir = TMP_DIR
@@ -489,109 +491,112 @@ class App:
             self._startup_logged = True
 
         pyxel.cls(1)
-        self.draw_text(4, 4, "LEFT/RIGHT: Move  R: Reset  C:Shot", 7)
-        self.draw_text(4, 12, "Hard:2  Item:W/S/M/F  Move:MV", 6)
-        self.draw_text(
-            4,
-            HEIGHT - 16,
-            f"Hard:{self.stage_field.hard_count} Item:{self.stage_field.item_count}",
-            5,
-        )
-        self.draw_text(WIDTH - 50, HEIGHT - 8, f"Stg:{self.stage}", 10)
-        self.draw_text(WIDTH - 60, 20, self.current_phase.label[:5], 12)
-        self.draw_text(4, 20, f"{self.selected_mode.value}/{self.selected_protocol.value}", 12)
+        if layout.show_hud:
+            self.draw_text(4, layout.top_text_y, "LR Move  R Reset  C Shot", 7)
+            self.draw_text(4, layout.top_sub_y, f"{self.selected_mode.value}/{self.selected_protocol.value}", 12)
+            self.draw_text(WIDTH - 74, layout.top_sub_y, self.current_phase.label[:8], 12)
 
-        for row in range(BLOCK_ROWS):
-            for col in range(BLOCK_COLS):
-                if self.stage_field.block_hp[row][col]:
-                    bx = BLOCK_OFFSET_X + col * (BLOCK_W + BLOCK_GAP)
-                    by = BLOCK_OFFSET_Y + row * (BLOCK_H + BLOCK_GAP)
-                    block_color = 2 if self.stage_field.block_hp[row][col] == 2 else 8 + row
-                    pyxel.rect(bx, by, BLOCK_W, BLOCK_H, block_color)
-                    if self.stage_field.block_hp[row][col] == 2:
-                        self.draw_text(bx + 1, by + 1, "2", 7)
-                    item_type = self.stage_field.item_blocks[row][col]
-                    if item_type == ItemType.WIDE:
-                        self.draw_text(bx + 9, by + 1, "W", 9)
-                    if item_type == ItemType.SLOW:
-                        self.draw_text(bx + 9, by + 1, "S", 11)
-                    if item_type == ItemType.MULTI:
-                        self.draw_text(bx + 9, by + 1, "M", 14)
-                    if item_type == ItemType.FAST:
-                        self.draw_text(bx + 9, by + 1, "F", 8)
+        draw_world = not (self.state == GameState.WAITING_START and self.run_elapsed_frames == 0)
+        if draw_world:
+            for row in range(BLOCK_ROWS):
+                for col in range(BLOCK_COLS):
+                    if self.stage_field.block_hp[row][col]:
+                        bx = BLOCK_OFFSET_X + col * (BLOCK_W + BLOCK_GAP)
+                        by = BLOCK_OFFSET_Y + row * (BLOCK_H + BLOCK_GAP)
+                        block_color = 2 if self.stage_field.block_hp[row][col] == 2 else 8 + row
+                        pyxel.rect(bx, by, BLOCK_W, BLOCK_H, block_color)
+                        if self.stage_field.block_hp[row][col] == 2:
+                            self.draw_text(bx + 1, by + 1, "2", 7)
+                        item_type = self.stage_field.item_blocks[row][col]
+                        if item_type == ItemType.WIDE:
+                            self.draw_text(bx + 9, by + 1, "W", 9)
+                        if item_type == ItemType.SLOW:
+                            self.draw_text(bx + 9, by + 1, "S", 11)
+                        if item_type == ItemType.MULTI:
+                            self.draw_text(bx + 9, by + 1, "M", 14)
+                        if item_type == ItemType.FAST:
+                            self.draw_text(bx + 9, by + 1, "F", 8)
 
-        moving = self.stage_field.moving_block
-        if moving.hp > 0:
-            pyxel.rect(moving.x, moving.y, MOVING_BLOCK_W, MOVING_BLOCK_H, 3)
-            self.draw_text(moving.x + 6, moving.y + 1, "MV", 7)
-            if moving.hp == 2:
-                self.draw_text(moving.x + 1, moving.y + 1, "2", 7)
+            moving = self.stage_field.moving_block
+            if moving.hp > 0:
+                pyxel.rect(moving.x, moving.y, MOVING_BLOCK_W, MOVING_BLOCK_H, 3)
+                self.draw_text(moving.x + 6, moving.y + 1, "MV", 7)
+                if moving.hp == 2:
+                    self.draw_text(moving.x + 1, moving.y + 1, "2", 7)
 
-        for item in self.items:
-            color = 9
-            if item.type == ItemType.SLOW:
-                color = 11
-            if item.type == ItemType.MULTI:
-                color = 14
-            if item.type == ItemType.FAST:
+            for item in self.items:
+                color = 9
+                if item.type == ItemType.SLOW:
+                    color = 11
+                if item.type == ItemType.MULTI:
+                    color = 14
+                if item.type == ItemType.FAST:
+                    color = 8
+                pyxel.rect(item.x - ITEM_SIZE // 2, item.y - ITEM_SIZE // 2, ITEM_SIZE, ITEM_SIZE, color)
+
+            for enemy in self.enemies:
                 color = 8
-            pyxel.rect(item.x - ITEM_SIZE // 2, item.y - ITEM_SIZE // 2, ITEM_SIZE, ITEM_SIZE, color)
+                if enemy.type == EnemyType.SPLITTER:
+                    color = 14
+                if enemy.type == EnemyType.SNIPER_ORB:
+                    color = 11
+                if enemy.type == EnemyType.SHIELD_NODE:
+                    color = 2
+                if enemy.type == EnemyType.NULL_CORE_BOSS:
+                    color = 7
+                radius = 3 if enemy.type != EnemyType.NULL_CORE_BOSS else 6
+                pyxel.circ(enemy.x, enemy.y, radius, color)
 
-        for enemy in self.enemies:
-            color = 8
-            if enemy.type == EnemyType.SPLITTER:
-                color = 14
-            if enemy.type == EnemyType.SNIPER_ORB:
-                color = 11
-            if enemy.type == EnemyType.SHIELD_NODE:
-                color = 2
-            if enemy.type == EnemyType.NULL_CORE_BOSS:
-                color = 7
-            radius = 3 if enemy.type != EnemyType.NULL_CORE_BOSS else 6
-            pyxel.circ(enemy.x, enemy.y, radius, color)
+            pyxel.rect(self.paddle_x, PADDLE_Y, self.paddle_w, PADDLE_H, 10)
+            for ball in self.ball_system.balls:
+                pyxel.circ(ball.x, ball.y, BALL_R, 7)
 
-        pyxel.rect(self.paddle_x, PADDLE_Y, self.paddle_w, PADDLE_H, 10)
-        for ball in self.ball_system.balls:
-            pyxel.circ(ball.x, ball.y, BALL_R, 7)
-
-        self.draw_text(4, HEIGHT - 8, f"Balls:{len(self.ball_system.balls)}", 7)
-        self.draw_text(72, HEIGHT - 8, f"Life:{self.lives}", 8)
-        self.draw_text(118, HEIGHT - 8, f"Rv:{self.remaining_revives}", 14)
-        self.draw_text(4, HEIGHT - 24, f"Score:{self.score}", 10)
-        self.draw_text(90, HEIGHT - 24, f"Combo:{self.combo}", 6)
-
-        if self.effect_system.effect_wide_timer > 0:
+        if layout.show_hud:
+            self.draw_text(4, layout.upper_bottom_y, f"Score:{self.score}", 10)
+            self.draw_text(90, layout.upper_bottom_y, f"Combo:{self.combo}", 6)
+            self.draw_text(4, layout.bottom_y, f"Balls:{len(self.ball_system.balls)}", 7)
+            self.draw_text(74, layout.bottom_y, f"Life:{self.lives}", 8)
+            self.draw_text(124, layout.bottom_y, f"Rv:{self.remaining_revives}", 14)
+            self.draw_text(WIDTH - 54, layout.bottom_y, f"Stg:{self.stage}", 10)
             self.draw_text(
-                40,
-                HEIGHT - 32,
-                f"W{self.effect_system.effect_wide_level}:{self.effect_system.effect_wide_timer // 60}s",
-                9,
+                4,
+                layout.bottom_y - 12,
+                f"Hard:{self.stage_field.hard_count} Item:{self.stage_field.item_count}",
+                5,
             )
-        if self.effect_system.effect_slow_timer > 0:
-            self.draw_text(
-                86,
-                HEIGHT - 32,
-                f"S{self.effect_system.effect_slow_level}:{self.effect_system.effect_slow_timer // 60}s",
-                11,
-            )
-        if self.effect_system.effect_fast_timer > 0:
-            self.draw_text(
-                170,
-                HEIGHT - 32,
-                f"F{self.effect_system.effect_fast_level}:{self.effect_system.effect_fast_timer // 60}s",
-                8,
-            )
+
+            if self.effect_system.effect_wide_timer > 0:
+                self.draw_text(
+                    140,
+                    layout.upper_bottom_y,
+                    f"W{self.effect_system.effect_wide_level}:{self.effect_system.effect_wide_timer // 60}s",
+                    9,
+                )
+            if self.effect_system.effect_slow_timer > 0:
+                self.draw_text(
+                    178,
+                    layout.upper_bottom_y,
+                    f"S{self.effect_system.effect_slow_level}:{self.effect_system.effect_slow_timer // 60}s",
+                    11,
+                )
+            if self.effect_system.effect_fast_timer > 0:
+                self.draw_text(
+                    216,
+                    layout.upper_bottom_y,
+                    f"F{self.effect_system.effect_fast_level}:{self.effect_system.effect_fast_timer // 60}s",
+                    8,
+                )
         if self.shot_message_timer > 0:
-            self.draw_text(4, 20, self.shot_message, 10)
+            self.draw_text(4, layout.top_sub_y + 10, self.shot_message, 10)
 
         if self.state == GameState.STAGE_CLEAR:
             self.draw_text(43, 56, f"STAGE {self.stage} CLEAR!", 11)
             self.draw_text(28, 66, "Next: N or auto", 7)
         if self.state == GameState.WAITING_START:
-            pyxel.rect(START_PANEL_X, START_PANEL_Y, START_PANEL_W, START_PANEL_H, 0)
-            pyxel.rectb(START_PANEL_X, START_PANEL_Y, START_PANEL_W, START_PANEL_H, 7)
-            x = START_PANEL_X + 10
-            y = START_PANEL_Y + 8
+            pyxel.rect(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 0)
+            pyxel.rectb(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 7)
+            x = layout.panel_x + 10
+            y = layout.panel_y + 8
             self.draw_text(x, y, "あそびかた", 10, jp=True)
             if self.run_elapsed_frames == 0:
                 self.draw_text(x, y + 12, "1:Story 2:Std 3:Hard", 7)
