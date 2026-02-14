@@ -22,6 +22,10 @@ python block_breaker.py
 - `Story` は開始直後に被ダメ軽減あり
 - `Fusion` は反射の補正が強め、`Reflex` は反射判定がシビアでスコア倍率高め
 - `SPACE`: ゲーム開始（ステージ開始）
+- タイトル画面:
+  - `↑ / ↓`: 項目選択
+  - `← / →`: Difficulty / Protocol 変更
+  - `ENTER / SPACE`: スタート
 - `← / →`: バー移動
 - `H`: HUD詳細表示のON/OFF
 - `C`: スクリーンショット保存（`tmp/jp.png` と `tmp/shot_YYYYMMDD_HHMMSS.png`）
@@ -68,6 +72,10 @@ python block_breaker.py
 - Max Combo
 - Damage（累積被ダメ）
 - Phase（到達フェーズ）
+
+補足:
+- 時間経過だけでライフは減りません。
+- ライフ減少は「ボール落下」または「敵到達」によるものです。
 
 ## 主要構成
 

@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from game.app import App
 from game.config import BalanceConfig
-from game.enums import DifficultyMode, ProtocolType
+from game.enums import DifficultyMode, GameState, ProtocolType
 from game.constants import BASE_SPEED_RATE
 
 
@@ -44,6 +44,7 @@ class AppInitTests(unittest.TestCase):
         App.reset(app)
 
         self.assertEqual(app.ball_speed_rate, BASE_SPEED_RATE)
+        self.assertEqual(app.state, GameState.TITLE)
 
     def test_reset_applies_life_upgrade_level(self):
         app = App.__new__(App)

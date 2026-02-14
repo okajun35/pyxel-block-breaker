@@ -9,6 +9,7 @@ class ItemType(str, Enum):
 
 
 class GameState(str, Enum):
+    TITLE = "title"
     WAITING_START = "waiting_start"
     PLAYING = "playing"
     STAGE_CLEAR = "stage_clear"

@@ -29,7 +29,7 @@ class UILayout:
 
 
 def build_layout(state: GameState) -> UILayout:
-    show_hud = state != GameState.WAITING_START
+    show_hud = state not in (GameState.WAITING_START, GameState.TITLE)
     bottom_y = HEIGHT - SAFE_MARGIN
     upper_bottom_y = HEIGHT - BOTTOM_HUD_H
     return UILayout(

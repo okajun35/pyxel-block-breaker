@@ -54,7 +54,6 @@ from game.automation import AutoRunConfig
 from game.effects import HitEffectSystem
 from game.audio import stage_music_pattern
 from game.run_report import build_run_report
-from game.tutorial import tutorial_lines, tutorial_page
 from game.metrics import MetricsStore
 
 
@@ -211,8 +210,10 @@ class App:
         self.combo = 0
         self.combo_timer = 0
         self.hud_detailed = False
+        self.title_menu_index = 0
         self.effect_system.reset_all()
         self.setup_stage()
+        self.state = GameState.TITLE
 
     def setup_stage(self):
         difficulty = self.balance.get_difficulty(self.selected_mode)
@@ -486,7 +487,7 @@ class App:
     def auto_play(self):
         if not self.auto.enabled:
             return
-        if self.state == GameState.WAITING_START and pyxel.frame_count > 10:
+        if self.state in (GameState.TITLE, GameState.WAITING_START) and pyxel.frame_count > 10:
             self.state = GameState.PLAYING
         if self.state == GameState.PLAYING and self.ball_system.balls:
             target_x = self.ball_system.balls[0].x
@@ -500,7 +501,7 @@ class App:
         if self.auto.exit_frame > 0 and pyxel.frame_count >= self.auto.exit_frame:
             self._build_report()
             self._record_run_metric()
-            raise SystemExit
+            os._exit(0)
 
     def update(self):
         if pyxel.btnp(pyxel.KEY_R):
@@ -527,41 +528,60 @@ class App:
                 self.next_stage()
             return
 
-        if self.state == GameState.WAITING_START:
-            if self.run_elapsed_frames == 0:
-                if pyxel.btnp(pyxel.KEY_1):
-                    self.selected_mode = DifficultyMode.STORY
-                    difficulty = self.balance.get_difficulty(self.selected_mode)
-                    self.lives = difficulty.base_lives + self._life_upgrade_level()
-                    self.remaining_revives = difficulty.revive_count
-                if pyxel.btnp(pyxel.KEY_2):
-                    self.selected_mode = DifficultyMode.STANDARD
-                    difficulty = self.balance.get_difficulty(self.selected_mode)
-                    self.lives = difficulty.base_lives + self._life_upgrade_level()
-                    self.remaining_revives = difficulty.revive_count
-                if pyxel.btnp(pyxel.KEY_3):
-                    self.selected_mode = DifficultyMode.HARDCORE
-                    difficulty = self.balance.get_difficulty(self.selected_mode)
-                    self.lives = difficulty.base_lives + self._life_upgrade_level()
-                    self.remaining_revives = difficulty.revive_count
-                if pyxel.btnp(pyxel.KEY_TAB):
-                    if self.selected_protocol == ProtocolType.FUSION:
-                        self.selected_protocol = ProtocolType.REFLEX
+        if self.state == GameState.TITLE:
+            if pyxel.btnp(pyxel.KEY_UP):
+                self.title_menu_index = (self.title_menu_index - 1) % 3
+            if pyxel.btnp(pyxel.KEY_DOWN):
+                self.title_menu_index = (self.title_menu_index + 1) % 3
+            if pyxel.btnp(pyxel.KEY_1):
+                self.selected_mode = DifficultyMode.STORY
+                self.setup_stage()
+            if pyxel.btnp(pyxel.KEY_2):
+                self.selected_mode = DifficultyMode.STANDARD
+                self.setup_stage()
+            if pyxel.btnp(pyxel.KEY_3):
+                self.selected_mode = DifficultyMode.HARDCORE
+                self.setup_stage()
+            if pyxel.btnp(pyxel.KEY_TAB):
+                self.selected_protocol = (
+                    ProtocolType.REFLEX
+                    if self.selected_protocol == ProtocolType.FUSION
+                    else ProtocolType.FUSION
+                )
+                self.setup_stage()
+            if pyxel.btnp(pyxel.KEY_LEFT) or pyxel.btnp(pyxel.KEY_RIGHT):
+                if self.title_menu_index == 1:
+                    if self.selected_mode == DifficultyMode.STORY:
+                        self.selected_mode = DifficultyMode.STANDARD
+                    elif self.selected_mode == DifficultyMode.STANDARD:
+                        self.selected_mode = DifficultyMode.HARDCORE
                     else:
-                        self.selected_protocol = ProtocolType.FUSION
+                        self.selected_mode = DifficultyMode.STORY
                     self.setup_stage()
-                if pyxel.btnp(pyxel.KEY_U) and hasattr(self, "progression"):
-                    upgraded = self.progression.try_upgrade_life()
-                    self.shot_message = "upgrade life +1" if upgraded else "need 10 core"
-                    self.shot_message_timer = 120
-                if pyxel.btnp(pyxel.KEY_I) and hasattr(self, "progression"):
-                    upgraded = self.progression.try_upgrade_core_gain()
-                    self.shot_message = "core gain +20%" if upgraded else "need 12 core"
-                    self.shot_message_timer = 120
-                if pyxel.btnp(pyxel.KEY_O) and hasattr(self, "progression"):
-                    upgraded = self.progression.try_upgrade_paddle()
-                    self.shot_message = "base paddle +4" if upgraded else "need 10 core"
-                    self.shot_message_timer = 120
+                if self.title_menu_index == 2:
+                    self.selected_protocol = (
+                        ProtocolType.REFLEX
+                        if self.selected_protocol == ProtocolType.FUSION
+                        else ProtocolType.FUSION
+                    )
+                    self.setup_stage()
+            if pyxel.btnp(pyxel.KEY_U) and hasattr(self, "progression"):
+                upgraded = self.progression.try_upgrade_life()
+                self.shot_message = "upgrade life +1" if upgraded else "need 10 core"
+                self.shot_message_timer = 120
+            if pyxel.btnp(pyxel.KEY_I) and hasattr(self, "progression"):
+                upgraded = self.progression.try_upgrade_core_gain()
+                self.shot_message = "core gain +20%" if upgraded else "need 12 core"
+                self.shot_message_timer = 120
+            if pyxel.btnp(pyxel.KEY_O) and hasattr(self, "progression"):
+                upgraded = self.progression.try_upgrade_paddle()
+                self.shot_message = "base paddle +4" if upgraded else "need 10 core"
+                self.shot_message_timer = 120
+            if pyxel.btnp(pyxel.KEY_RETURN) or pyxel.btnp(pyxel.KEY_SPACE):
+                self.state = GameState.PLAYING
+            return
+
+        if self.state == GameState.WAITING_START:
             if pyxel.btnp(pyxel.KEY_SPACE):
                 self.state = GameState.PLAYING
             return
@@ -693,7 +713,7 @@ class App:
                 self.draw_text(4, layout.top_sub_y, f"{self.selected_mode.value}/{self.selected_protocol.value}", 12)
                 self.draw_text(WIDTH - 74, layout.top_sub_y, self.current_phase.label[:8], 12)
 
-        draw_world = self.state != GameState.WAITING_START
+        draw_world = self.state not in (GameState.WAITING_START, GameState.TITLE)
         if draw_world:
             for row in range(BLOCK_ROWS):
                 for col in range(BLOCK_COLS):
@@ -815,6 +835,27 @@ class App:
         if self.state == GameState.STAGE_CLEAR:
             self.draw_text(43, 56, f"STAGE {self.stage} CLEAR!", 11)
             self.draw_text(28, 66, "Next: N or auto", 7)
+        if self.state == GameState.TITLE:
+            if self.use_sprite_assets:
+                pyxel.blt(layout.panel_x, layout.panel_y, 2, 0, 0, layout.panel_w, layout.panel_h, 1)
+            else:
+                pyxel.rect(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 0)
+                pyxel.rectb(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 7)
+            x = layout.panel_x + 10
+            y = layout.panel_y + 8
+            self.draw_text(x, y, "PIT ARK BREAKER", 10)
+            cursor = [">", " ", " "]
+            cursor[self.title_menu_index] = ">"
+            self.draw_text(x, y + 14, f"{cursor[0]} Start", 7)
+            self.draw_text(x, y + 26, f"{cursor[1]} Difficulty: {self.selected_mode.value}", 7)
+            self.draw_text(x, y + 38, f"{cursor[2]} Protocol: {self.selected_protocol.value}", 7)
+            self.draw_text(x, y + 54, "UP/DOWN: select", 12)
+            self.draw_text(x, y + 64, "LEFT/RIGHT: change", 12)
+            self.draw_text(x, y + 74, "ENTER/SPACE: start", 10)
+            self.draw_text(x, y + 88, "U/I/O: upgrades", 11)
+            if hasattr(self, "progression"):
+                core = self.progression.state.core_shards
+                self.draw_text(x, y + 100, f"Core:{core}", 7)
         if self.state == GameState.WAITING_START:
             if self.use_sprite_assets:
                 pyxel.blt(layout.panel_x, layout.panel_y, 2, 0, 0, layout.panel_w, layout.panel_h, 1)
@@ -823,19 +864,10 @@ class App:
                 pyxel.rectb(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 7)
             x = layout.panel_x + 10
             y = layout.panel_y + 8
-            self.draw_text(x, y, "あそびかた", 10, jp=True)
-            self.draw_text(x, y + 12, "1/2/3: むずかしさ", 7, jp=True)
-            self.draw_text(x, y + 24, "ひだり/みぎ: いどう", 7, jp=True)
-            t_page = tutorial_page(pyxel.frame_count)
-            for i, line in enumerate(tutorial_lines(t_page)):
-                self.draw_text(x, y + 36 + i * 12, line, 12, jp=True)
-            self.draw_text(x, y + 84, "C:save U/I/O", 10)
-            if hasattr(self, "progression"):
-                core = self.progression.state.core_shards
-                lv = self.progression.state.life_upgrade_level
-                cg = self.progression.state.core_gain_upgrade_level
-                pw = self.progression.state.paddle_upgrade_level
-                self.draw_text(x, y + 96, f"Core:{core} L:{lv} G:{cg} P:{pw}", 7)
+            self.draw_text(x, y, "READY", 10)
+            self.draw_text(x, y + 16, "SPACE: continue", 7)
+            self.draw_text(x, y + 28, "LEFT/RIGHT: move", 7)
+            self.draw_text(x, y + 40, "C: screenshot", 7)
         if self.state == GameState.GAME_OVER:
             self.draw_text(51, 58, "GAME OVER", 8)
             self.draw_text(43, 68, "Press R to retry", 7)
