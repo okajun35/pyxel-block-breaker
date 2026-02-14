@@ -18,6 +18,8 @@ class DummyEffectSystem:
 class DummyProgression:
     class State:
         life_upgrade_level = 2
+        core_gain_upgrade_level = 1
+        paddle_upgrade_level = 2
 
     state = State()
 
@@ -47,6 +49,12 @@ class AppInitTests(unittest.TestCase):
         App.reset(app)
 
         self.assertEqual(app.lives, 5)
+
+    def test_upgrade_helpers(self):
+        app = App.__new__(App)
+        app.progression = DummyProgression()
+        self.assertEqual(App._core_gain_multiplier(app), 1.2)
+        self.assertEqual(App._paddle_upgrade_bonus(app), 8)
 
     def test_save_screenshot_creates_tmp_jp_png(self):
         app = App.__new__(App)

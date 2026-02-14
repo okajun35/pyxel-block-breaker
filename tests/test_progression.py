@@ -34,6 +34,22 @@ class ProgressionTests(unittest.TestCase):
             self.assertEqual(b.state.core_shards, 1)
             self.assertEqual(b.state.life_upgrade_level, 1)
 
+    def test_upgrade_core_gain(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "progression.json"
+            store = ProgressionStore(path)
+            store.add_core(20)
+            self.assertTrue(store.try_upgrade_core_gain())
+            self.assertEqual(store.state.core_gain_upgrade_level, 1)
+
+    def test_upgrade_paddle(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "progression.json"
+            store = ProgressionStore(path)
+            store.add_core(20)
+            self.assertTrue(store.try_upgrade_paddle())
+            self.assertEqual(store.state.paddle_upgrade_level, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -25,7 +25,9 @@ python block_breaker.py
 - `← / →`: バー移動
 - `H`: HUD詳細表示のON/OFF
 - `C`: スクリーンショット保存（`tmp/jp.png` と `tmp/shot_YYYYMMDD_HHMMSS.png`）
-- `U`: ラン外強化（開始画面のみ、Coreを10消費して最大ライフ+1）
+- `U`: 最大ライフ強化（開始画面、Core 10）
+- `I`: Core獲得率強化（開始画面、Core 12）
+- `O`: 基礎バー幅強化（開始画面、Core 10）
 - `N`: ステージクリア後に次ステージへ進む
 - `R`: 最初からリセット
 
@@ -54,7 +56,17 @@ python block_breaker.py
 
 - ステージクリア時とゲームオーバー時に `Core Shard` を獲得
 - `U` キーで最大ライフ強化（上限3）
+- `I` キーでCore獲得率強化（上限3、+20%/Lv）
+- `O` キーで基礎バー幅強化（上限3、+4px/Lv）
 - 進捗は `tmp/progression.json` に保存
+
+## 終了評価
+
+- Game Over時に以下を表示
+- Time（生存秒数）
+- Max Combo
+- Damage（累積被ダメ）
+- Phase（到達フェーズ）
 
 ## 主要構成
 

@@ -52,6 +52,7 @@ from game.assets import AssetCatalog, EnemySpriteAnimator, SpriteSheet
 from game.automation import AutoRunConfig
 from game.effects import HitEffectSystem
 from game.audio import stage_music_pattern
+from game.run_report import build_run_report
 
 
 class App:
@@ -190,6 +191,9 @@ class App:
         self.lives = base_lives
         self.stage = 1
         self.run_rewarded = False
+        self.damage_taken_total = 0
+        self.max_combo = 0
+        self.last_report = None
         self.state = GameState.WAITING_START
         self.stage_clear_timer = 0
         self.shot_message = ""
@@ -317,6 +321,7 @@ class App:
         if elapsed_sec < difficulty.early_guard_seconds:
             actual = max(1, math.ceil(actual * 0.5))
         self.lives -= actual
+        self.damage_taken_total += actual
         if self.lives <= 0:
             if self.remaining_revives > 0:
                 self.remaining_revives -= 1
@@ -363,6 +368,7 @@ class App:
                 if enemy.hp <= 0:
                     self.score += self._enemy_score(enemy.type)
                     self.combo += 1
+                    self.max_combo = max(self.max_combo, self.combo)
                     self.combo_timer = 180
                     is_boss = enemy.type == EnemyType.NULL_CORE_BOSS
                     self.hit_fx.spawn_enemy_hit(enemy.x, enemy.y, boss=is_boss)
@@ -384,10 +390,21 @@ class App:
             return 0
         return self.progression.state.life_upgrade_level
 
+    def _paddle_upgrade_bonus(self) -> int:
+        if not hasattr(self, "progression"):
+            return 0
+        return self.progression.state.paddle_upgrade_level * 4
+
+    def _core_gain_multiplier(self) -> float:
+        if not hasattr(self, "progression"):
+            return 1.0
+        return 1.0 + self.progression.state.core_gain_upgrade_level * 0.2
+
     def _grant_core_for_stage_clear(self):
         if not hasattr(self, "progression"):
             return
-        self.progression.add_core(3 + min(3, self.stage))
+        gained = 3 + min(3, self.stage)
+        self.progression.add_core(int(gained * self._core_gain_multiplier()))
 
     def _grant_core_for_run_end(self):
         if not hasattr(self, "progression"):
@@ -395,8 +412,17 @@ class App:
         if self.run_rewarded:
             return
         gained = max(1, self.score // 200)
-        self.progression.add_core(gained)
+        self.progression.add_core(int(gained * self._core_gain_multiplier()))
         self.run_rewarded = True
+
+    def _build_report(self):
+        self.last_report = build_run_report(
+            elapsed_frames=self.run_elapsed_frames,
+            max_combo=self.max_combo,
+            damage_taken=self.damage_taken_total,
+            cleared_phase=self.current_phase.phase_id,
+            score=self.score,
+        )
 
     def play_stage_music(self):
         pyxel.stop(2)
@@ -467,6 +493,8 @@ class App:
 
         if self.state == GameState.GAME_OVER:
             self._grant_core_for_run_end()
+            if self.last_report is None:
+                self._build_report()
             return
 
         if self.state == GameState.STAGE_CLEAR:
@@ -501,6 +529,14 @@ class App:
                 if pyxel.btnp(pyxel.KEY_U) and hasattr(self, "progression"):
                     upgraded = self.progression.try_upgrade_life()
                     self.shot_message = "upgrade life +1" if upgraded else "need 10 core"
+                    self.shot_message_timer = 120
+                if pyxel.btnp(pyxel.KEY_I) and hasattr(self, "progression"):
+                    upgraded = self.progression.try_upgrade_core_gain()
+                    self.shot_message = "core gain +20%" if upgraded else "need 12 core"
+                    self.shot_message_timer = 120
+                if pyxel.btnp(pyxel.KEY_O) and hasattr(self, "progression"):
+                    upgraded = self.progression.try_upgrade_paddle()
+                    self.shot_message = "base paddle +4" if upgraded else "need 10 core"
                     self.shot_message_timer = 120
             if pyxel.btnp(pyxel.KEY_SPACE):
                 self.state = GameState.PLAYING
@@ -566,6 +602,7 @@ class App:
                     self.state = GameState.GAME_OVER
                     self.play_se(7)
                     self._grant_core_for_run_end()
+                    self._build_report()
                     return
             self.play_se(5)
             self.respawn_ball()
@@ -575,6 +612,8 @@ class App:
         self.update_enemies()
         if self.state == GameState.GAME_OVER:
             self._grant_core_for_run_end()
+            if self.last_report is None:
+                self._build_report()
             return
         self.resolve_ball_enemy_collisions()
         if self.stage_field.all_cleared():
@@ -585,6 +624,7 @@ class App:
 
         self.update_items()
         self.paddle_w, self.ball_speed_rate = self.effect_system.tick()
+        self.paddle_w += self._paddle_upgrade_bonus()
         self.paddle_x = max(0, min(WIDTH - self.paddle_w, self.paddle_x))
         self.hit_fx.tick()
 
@@ -763,11 +803,18 @@ class App:
             self.draw_text(x, y + 36, "ひだり/みぎ: いどう", 7, jp=True, small_jp=True)
             self.draw_text(x, y + 48, "W/S/M/F: アイテム", 7, jp=True, small_jp=True)
             self.draw_text(x, y + 60, "SPACE: スタート", 10, jp=True, small_jp=True)
-            self.draw_text(x, y + 72, "C: 保存  U:ライフ強化", 10, jp=True, small_jp=True)
+            self.draw_text(x, y + 72, "C保存 U/I/O強化", 10, jp=True, small_jp=True)
             if hasattr(self, "progression"):
                 core = self.progression.state.core_shards
                 lv = self.progression.state.life_upgrade_level
-                self.draw_text(x, y + 84, f"Core:{core} LifeLv:{lv}/3", 7)
+                cg = self.progression.state.core_gain_upgrade_level
+                pw = self.progression.state.paddle_upgrade_level
+                self.draw_text(x, y + 84, f"Core:{core} L:{lv} G:{cg} P:{pw}", 7)
         if self.state == GameState.GAME_OVER:
             self.draw_text(51, 58, "GAME OVER", 8)
             self.draw_text(43, 68, "Press R to retry", 7)
+            if self.last_report is not None:
+                self.draw_text(36, 80, f"Time:{self.last_report.time_sec}s", 7)
+                self.draw_text(36, 90, f"MaxCombo:{self.last_report.max_combo}", 7)
+                self.draw_text(36, 100, f"Damage:{self.last_report.damage_taken}", 7)
+                self.draw_text(36, 110, f"Phase:{self.last_report.cleared_phase}", 7)
