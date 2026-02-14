@@ -243,7 +243,8 @@ class App:
         }[enemy_type]
         difficulty = self.balance.get_difficulty(self.selected_mode)
         protocol = self.balance.get_protocol(self.selected_protocol)
-        return int(base * difficulty.score_mul * protocol.base_score_mul)
+        combo_mul = 1.0 + min(self.combo, 20) * 0.05 * protocol.combo_score_mul
+        return int(base * difficulty.score_mul * protocol.base_score_mul * combo_mul)
 
     def _apply_enemy_damage(self, damage: int):
         difficulty = self.balance.get_difficulty(self.selected_mode)
