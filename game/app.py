@@ -984,7 +984,7 @@ class App:
             x = layout.panel_x + 10
             y = layout.panel_y + 8
             self.draw_text(x, y, "すたあと めにゆう", 10, jp=True)
-            cursor = [">", " ", " ", " ", " ", " "]
+            cursor = [" ", " ", " ", " ", " ", " "]
             cursor[self.title_menu_index] = ">"
             style = "はじめて" if self.play_style_beginner else "ふつう"
             enemy_opt = "ON" if self.enemy_enabled_option else "OFF"
