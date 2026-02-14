@@ -207,12 +207,15 @@ class App:
         self.items_collected_total = 0
         self.intro_spawn_index = 0
         self.play_style_beginner = not self._tutorial_seen()
-        self.enemy_enabled_option = True
+        self.enemy_enabled_option = False
         self.enemy_visible_option = True
         self.state = GameState.WAITING_START
         self.stage_clear_timer = 0
         self.shot_message = ""
         self.shot_message_timer = 0
+        self.life_loss_modal_title = ""
+        self.life_loss_modal_detail = ""
+        self.life_loss_modal_timer = 0
         self.items: list[FallingItem] = []
         self.enemies: list[Enemy] = []
         self.enemy_spawn_timer = 0
@@ -264,6 +267,8 @@ class App:
         return self.stage == 1 and self.run_elapsed_frames < 60 * 5
 
     def _enemy_active(self) -> bool:
+        if self.stage <= 1:
+            return False
         if not self.enemy_enabled_option:
             return False
         if self.play_style_beginner and self.stage == 1:
@@ -380,6 +385,8 @@ class App:
         self.lives -= actual
         self.damage_taken_total += actual
         self._record_damage_cause(cause)
+        if self.lives > 0:
+            self._show_life_loss_modal(cause, actual)
         if self.lives <= 0:
             if self.remaining_revives > 0:
                 self.remaining_revives -= 1
@@ -388,6 +395,26 @@ class App:
                 self.state = GameState.GAME_OVER
                 self.play_se(7)
                 self._grant_core_for_run_end()
+
+    def _show_life_loss_modal(self, cause: str, amount: int):
+        if cause.startswith("enemy_reach"):
+            enemy_id = cause.split(":", 1)[1] if ":" in cause else "enemy"
+            enemy_labels = {
+                EnemyType.DRONE.value: "drone",
+                EnemyType.SPLITTER.value: "splitter",
+                EnemyType.SNIPER_ORB.value: "sniper",
+                EnemyType.SHIELD_NODE.value: "shield",
+                EnemyType.NULL_CORE_BOSS.value: "boss",
+            }
+            label = enemy_labels.get(enemy_id, "enemy")
+            self.life_loss_modal_title = "らいふ -1"
+            self.life_loss_modal_detail = f"りゆう: てき({label})"
+        else:
+            self.life_loss_modal_title = "らいふ -1"
+            self.life_loss_modal_detail = "りゆう: ほおるをおとした"
+        if amount > 1:
+            self.life_loss_modal_title = f"らいふ -{amount}"
+        self.life_loss_modal_timer = 1
 
     def update_enemies(self):
         elapsed_sec = self.run_elapsed_frames // 60
@@ -590,6 +617,20 @@ class App:
             self.save_screen_shot()
         if self.shot_message_timer > 0:
             self.shot_message_timer -= 1
+
+        if self.life_loss_modal_timer > 0:
+            self.auto_capture()
+            if self.auto.enabled:
+                self.life_loss_modal_timer = 0
+                if self.auto.exit_frame > 0 and pyxel.frame_count >= self.auto.exit_frame:
+                    self._build_report()
+                    self._record_run_metric()
+                    os._exit(0)
+                return
+            if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.KEY_RETURN):
+                self.life_loss_modal_timer = 0
+            return
+
         self.auto_play()
 
         if self.state == GameState.GAME_OVER:
@@ -722,6 +763,8 @@ class App:
         if not self.ball_system.balls:
             self.lives -= 1
             self._record_damage_cause("ball_drop")
+            if self.lives > 0:
+                self._show_life_loss_modal("ball_drop", 1)
             if self.lives <= 0:
                 if self.remaining_revives > 0:
                     self.remaining_revives -= 1
@@ -956,6 +999,7 @@ class App:
             self.draw_text(x, y + 76, "U/D:えらぶ L/R:へんこう", 12, jp=True)
             self.draw_text(x, y + 86, "ENTER/SPACE:START", 10, jp=True)
             self.draw_text(x, y + 98, "U/I/O:きょうか", 11, jp=True)
+            self.draw_text(x + 96, y + 86, "1めん:てきなし", 6, jp=True, small_jp=True)
             if hasattr(self, "progression"):
                 core = self.progression.state.core_shards
                 self.draw_text(x + 112, y + 98, f"Core:{core}", 7)
@@ -968,7 +1012,7 @@ class App:
             self.draw_text(x, y + 14, "1) ひだり/みぎ で いどう", 7, jp=True)
             self.draw_text(x, y + 24, "2) 5こ こわしてみる", 7, jp=True)
             self.draw_text(x, y + 34, "3) あいてむを1こ とる", 7, jp=True)
-            self.draw_text(x, y + 48, "はじめて: てきは あとででる", 12, jp=True)
+            self.draw_text(x, y + 48, "1めんは てきが でない", 12, jp=True)
             self.draw_text(x, y + 60, "SPACE: はじめる", 10, jp=True)
             self.draw_text(x, y + 70, "S: すきっぷ", 8, jp=True)
         if self.state == GameState.WAITING_START:
@@ -980,6 +1024,16 @@ class App:
             self.draw_text(x, y + 14, "SPACE:つづける", 7, jp=True, small_jp=True)
             self.draw_text(x, y + 24, "ひだり/みぎ:いどう", 7, jp=True, small_jp=True)
             self.draw_text(x, y + 34, "C:がめん保存", 7, jp=True, small_jp=True)
+        if self.life_loss_modal_timer > 0:
+            mx = START_PANEL_X + 14
+            my = START_PANEL_Y + 24
+            mw = START_PANEL_W - 28
+            mh = 54
+            pyxel.rect(mx, my, mw, mh, 0)
+            pyxel.rectb(mx, my, mw, mh, 7)
+            self.draw_text(mx + 8, my + 10, self.life_loss_modal_title, 8, jp=True)
+            self.draw_text(mx + 8, my + 24, self.life_loss_modal_detail, 7, jp=True)
+            self.draw_text(mx + 8, my + 38, "SPACE:つつける", 10, jp=True)
         if self.state == GameState.GAME_OVER:
             self.draw_text(51, 58, "GAME OVER", 8)
             self.draw_text(43, 68, "Press R to retry", 7)

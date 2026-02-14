@@ -94,6 +94,27 @@ class AppInitTests(unittest.TestCase):
         app.blocks_broken_total = 0
         self.assertFalse(App._enemy_active(app))
 
+    def test_enemy_never_active_on_stage1(self):
+        app = App.__new__(App)
+        app.enemy_enabled_option = True
+        app.play_style_beginner = False
+        app.stage = 1
+        app.run_elapsed_frames = 9999
+        app.blocks_broken_total = 99
+        self.assertFalse(App._enemy_active(app))
+
+    def test_show_life_loss_modal_sets_message(self):
+        app = App.__new__(App)
+        app.life_loss_modal_title = ""
+        app.life_loss_modal_detail = ""
+        app.life_loss_modal_timer = 0
+
+        App._show_life_loss_modal(app, "ball_drop", 1)
+
+        self.assertIn("らいふ", app.life_loss_modal_title)
+        self.assertIn("りゆう", app.life_loss_modal_detail)
+        self.assertEqual(app.life_loss_modal_timer, 1)
+
     def test_save_screenshot_creates_tmp_jp_png(self):
         app = App.__new__(App)
         app.shot_message = ""
