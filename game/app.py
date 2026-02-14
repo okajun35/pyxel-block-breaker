@@ -224,6 +224,9 @@ class App:
     def _apply_enemy_damage(self, damage: int):
         difficulty = self.balance.get_difficulty(self.selected_mode)
         actual = max(1, math.ceil(damage * difficulty.enemy_damage_mul))
+        elapsed_sec = self.run_elapsed_frames // 60
+        if elapsed_sec < difficulty.early_guard_seconds:
+            actual = max(1, math.ceil(actual * 0.5))
         self.lives -= actual
         if self.lives <= 0:
             if self.remaining_revives > 0:
@@ -354,6 +357,8 @@ class App:
         if pyxel.btn(pyxel.KEY_RIGHT):
             self.paddle_x += PADDLE_SPEED
         self.paddle_x = max(0, min(WIDTH - self.paddle_w, self.paddle_x))
+        protocol = self.balance.get_protocol(self.selected_protocol)
+        reflect_margin_px = max(0, protocol.reflect_window_ms // 20)
 
         alive_balls = []
         self.run_elapsed_frames += 1
@@ -370,10 +375,15 @@ class App:
 
             if (
                 ball.vy > 0
-                and PADDLE_Y <= ball.y + BALL_R <= PADDLE_Y + PADDLE_H
+                and PADDLE_Y - reflect_margin_px
+                <= ball.y + BALL_R
+                <= PADDLE_Y + PADDLE_H + reflect_margin_px
                 and self.paddle_x <= ball.x <= self.paddle_x + self.paddle_w
             ):
-                offset = (ball.x - (self.paddle_x + self.paddle_w / 2)) / (self.paddle_w / 2)
+                assist = 1.0 + (protocol.paddle_aim_assist_deg / 40.0)
+                offset = (
+                    (ball.x - (self.paddle_x + self.paddle_w / 2)) / (self.paddle_w / 2)
+                ) / assist
                 ball.vx, ball.vy = self.ball_system.normalized_velocity(offset, -1.3)
                 self.play_se(2)
 
@@ -455,6 +465,7 @@ class App:
         )
         self.draw_text(124, HEIGHT - 8, f"Stg:{self.stage}", 10)
         self.draw_text(118, 20, self.current_phase.label[:5], 12)
+        self.draw_text(4, 20, f"{self.selected_mode.value}/{self.selected_protocol.value}", 12)
 
         for row in range(BLOCK_ROWS):
             for col in range(BLOCK_COLS):
