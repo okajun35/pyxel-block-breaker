@@ -100,3 +100,10 @@ block_breaker.py
   - `assets/sprites/sheet.png`
   - `assets/ui/panel_start.png`
   - `assets/backgrounds/starfield_01.png` 〜 `starfield_04.png`
+- 人手なし自動キャプチャ:
+  - `python tools/auto_capture.py`
+  - 出力: `tmp/auto_0030.png` など
+  - 環境変数:
+    - `PYXEL_AUTORUN=1` 自動プレイ有効
+    - `PYXEL_AUTOCAP_FRAMES=30,90,150` キャプチャフレーム
+    - `PYXEL_AUTOEXIT_FRAME=240` 自動終了フレーム

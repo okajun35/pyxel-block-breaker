@@ -49,6 +49,7 @@ from game.systems import BallSystem, EffectSystem, StageField
 from game.ui_layout import build_layout
 from game.progression import ProgressionStore
 from game.assets import AssetCatalog, EnemySpriteAnimator, SpriteSheet
+from game.automation import AutoRunConfig
 
 
 class App:
@@ -61,6 +62,8 @@ class App:
         self.jp_small_font = self.load_jp_small_font()
         self.setup_audio()
         self.balance = BalanceConfig()
+        self.auto = AutoRunConfig.from_env(os.environ)
+        self.auto_captured_frames: set[int] = set()
         self.progression = ProgressionStore(PROGRESSION_PATH)
         self.asset_catalog = AssetCatalog()
         self.use_sprite_assets = False
@@ -405,6 +408,39 @@ class App:
         self.shot_message = f"saved: {target_fixed.as_posix()}"
         self.shot_message_timer = 180
 
+    def auto_capture(self):
+        if not self.auto.enabled:
+            return
+        if pyxel.frame_count not in self.auto.capture_frames:
+            return
+        if pyxel.frame_count in self.auto_captured_frames:
+            return
+        self.auto_captured_frames.add(pyxel.frame_count)
+        tmp_dir = TMP_DIR
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        path = tmp_dir / f"auto_{pyxel.frame_count:04d}.png"
+        try:
+            self.capture_screen(path)
+        except Exception:
+            return
+
+    def auto_play(self):
+        if not self.auto.enabled:
+            return
+        if self.state == GameState.WAITING_START and pyxel.frame_count > 10:
+            self.state = GameState.PLAYING
+        if self.state == GameState.PLAYING and self.ball_system.balls:
+            target_x = self.ball_system.balls[0].x
+            paddle_center = self.paddle_x + self.paddle_w / 2
+            if target_x < paddle_center - 1:
+                self.paddle_x -= PADDLE_SPEED
+            elif target_x > paddle_center + 1:
+                self.paddle_x += PADDLE_SPEED
+            self.paddle_x = max(0, min(WIDTH - self.paddle_w, self.paddle_x))
+        self.auto_capture()
+        if self.auto.exit_frame > 0 and pyxel.frame_count >= self.auto.exit_frame:
+            raise SystemExit
+
     def update(self):
         if pyxel.btnp(pyxel.KEY_R):
             self.reset()
@@ -415,6 +451,7 @@ class App:
             self.save_screen_shot()
         if self.shot_message_timer > 0:
             self.shot_message_timer -= 1
+        self.auto_play()
 
         if self.state == GameState.GAME_OVER:
             self._grant_core_for_run_end()
