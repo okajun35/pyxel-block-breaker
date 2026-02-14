@@ -15,6 +15,7 @@ from game.constants import (
     HEIGHT,
     JP_FONT_FALLBACK_PATH,
     JP_FONT_PATH,
+    JP_FONT_SYSTEM_CANDIDATES,
     JP_SMALL_FONT_PATH,
     JP_FONT_SIZE,
     WIDTH,
@@ -28,11 +29,21 @@ def load_font(path: str, size: int):
         return pyxel.Font(JP_FONT_FALLBACK_PATH), f"bdf:{JP_FONT_FALLBACK_PATH}"
 
 
+def load_font_from_candidates(size: int):
+    candidates = [JP_FONT_PATH, *JP_FONT_SYSTEM_CANDIDATES]
+    for path in candidates:
+        try:
+            return pyxel.Font(path, size), f"ttf:{path}@{size}"
+        except Exception:
+            continue
+    return pyxel.Font(JP_FONT_FALLBACK_PATH), f"bdf:{JP_FONT_FALLBACK_PATH}"
+
+
 def load_small_font():
     try:
         return pyxel.Font(JP_SMALL_FONT_PATH), f"bdf:{JP_SMALL_FONT_PATH}"
     except Exception:
-        return load_font(JP_FONT_PATH, JP_FONT_SIZE)
+        return load_font_from_candidates(JP_FONT_SIZE)
 
 
 def main():
@@ -40,20 +51,21 @@ def main():
     tmp.mkdir(parents=True, exist_ok=True)
 
     t0 = time.perf_counter()
-    font_main, font_main_name = load_font(JP_FONT_PATH, JP_FONT_SIZE)
+    font_main, font_main_name = load_font_from_candidates(JP_FONT_SIZE)
     font_small, font_small_name = load_small_font()
     t1 = time.perf_counter()
 
     img = pyxel.Image(WIDTH, HEIGHT)
     img.cls(1)
-    img.rect(8, 28, 144, 72, 0)
-    img.rectb(8, 28, 144, 72, 7)
+    img.rect(8, 28, 188, 96, 0)
+    img.rectb(8, 28, 188, 96, 7)
     img.text(14, 36, "あそびかた", 10, font_main)
-    img.text(14, 48, "ひだり/みぎ いどう", 7, font_small)
-    img.text(14, 58, "ぜんぶこわして クリア", 7, font_small)
-    img.text(14, 68, "W:バー  S:スロー", 7, font_small)
-    img.text(14, 78, "M:+たま  F:はやい(2~)", 7, font_small)
-    img.text(14, 90, "SPACE:スタート C:保存", 10, font_small)
+    img.text(14, 48, "1/2/3: むずかしさ", 7, font_small)
+    img.text(14, 60, "TAB: モードきりかえ", 7, font_small)
+    img.text(14, 72, "ひだり/みぎ: いどう", 7, font_small)
+    img.text(14, 84, "W/S/M/F: アイテム", 7, font_small)
+    img.text(14, 96, "SPACE: スタート", 10, font_small)
+    img.text(14, 108, "C: がめん保存", 10, font_small)
     img.save(str(tmp / "jp_selfcheck.png"), 1)
 
     ti0 = time.perf_counter()

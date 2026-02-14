@@ -4,6 +4,7 @@ import time
 import shutil
 import os
 import math
+from typing import Iterable
 
 import pyxel
 
@@ -22,6 +23,7 @@ from game.constants import (
     ITEM_SIZE,
     JP_FONT_FALLBACK_PATH,
     JP_FONT_PATH,
+    JP_FONT_SYSTEM_CANDIDATES,
     JP_SMALL_FONT_PATH,
     JP_FONT_SIZE,
     START_PANEL_H,
@@ -63,14 +65,24 @@ class App:
         self.export_japanese_preview()
         pyxel.run(self.update, self.draw)
 
+    def _font_candidates(self) -> Iterable[str]:
+        env_font = os.getenv("JP_FONT_PATH")
+        if env_font:
+            yield env_font
+        yield JP_FONT_PATH
+        for path in JP_FONT_SYSTEM_CANDIDATES:
+            yield path
+
     def load_jp_font(self, size: int):
-        try:
-            return pyxel.Font(JP_FONT_PATH, size)
-        except Exception:
+        for path in self._font_candidates():
             try:
-                return pyxel.Font(JP_FONT_FALLBACK_PATH)
+                return pyxel.Font(path, size)
             except Exception:
-                return None
+                continue
+        try:
+            return pyxel.Font(JP_FONT_FALLBACK_PATH)
+        except Exception:
+            return None
 
     def load_jp_small_font(self):
         try:
@@ -114,11 +126,12 @@ class App:
         if self.jp_small_font is not None:
             x = START_PANEL_X + 10
             y = START_PANEL_Y + 20
-            img.text(x, y, "ひだり/みぎ いどう", 7, self.jp_small_font)
-            img.text(x, y + 10, "ぜんぶこわして クリア", 7, self.jp_small_font)
-            img.text(x, y + 20, "W:バー  S:スロー", 7, self.jp_small_font)
-            img.text(x, y + 30, "M:+たま  F:はやい(2~)", 7, self.jp_small_font)
-            img.text(x, y + 42, "SPACE:スタート C:保存", 10, self.jp_small_font)
+            img.text(x, y, "1/2/3: むずかしさ", 7, self.jp_small_font)
+            img.text(x, y + 12, "TAB: モードきりかえ", 7, self.jp_small_font)
+            img.text(x, y + 24, "ひだり/みぎ: いどう", 7, self.jp_small_font)
+            img.text(x, y + 36, "W/S/M/F: アイテム", 7, self.jp_small_font)
+            img.text(x, y + 48, "SPACE: スタート", 10, self.jp_small_font)
+            img.text(x, y + 60, "C: がめん保存", 10, self.jp_small_font)
         img.save(str(tmp_dir / "jp_preview.png"), 1)
 
     def reset(self):
@@ -604,18 +617,12 @@ class App:
             x = layout.panel_x + 10
             y = layout.panel_y + 8
             self.draw_text(x, y, "あそびかた", 10, jp=True)
-            if self.run_elapsed_frames == 0:
-                self.draw_text(x, y + 12, "1:Story 2:Std 3:Hard", 7)
-                self.draw_text(x, y + 22, f"Mode:{self.selected_mode.value}", 7)
-                self.draw_text(x, y + 32, f"Proto:{self.selected_protocol.value} (TAB)", 7)
-                self.draw_text(x, y + 42, "W/S/M/F items + SF phase", 7)
-                self.draw_text(x, y + 54, "SPACE:start  C:shot  H:hud", 10)
-            else:
-                self.draw_text(x, y + 12, "ひだり/みぎ いどう", 7, jp=True, small_jp=True)
-                self.draw_text(x, y + 22, "ぜんぶこわして クリア", 7, jp=True, small_jp=True)
-                self.draw_text(x, y + 32, "W:バー  S:スロー", 7, jp=True, small_jp=True)
-                self.draw_text(x, y + 42, "M:+たま  F:はやい(2~)", 7, jp=True, small_jp=True)
-                self.draw_text(x, y + 54, "SPACE:スタート C:保存 H:HUD", 10, jp=True, small_jp=True)
+            self.draw_text(x, y + 12, "1/2/3: むずかしさ", 7, jp=True, small_jp=True)
+            self.draw_text(x, y + 24, "TAB: モードきりかえ", 7, jp=True, small_jp=True)
+            self.draw_text(x, y + 36, "ひだり/みぎ: いどう", 7, jp=True, small_jp=True)
+            self.draw_text(x, y + 48, "W/S/M/F: アイテム", 7, jp=True, small_jp=True)
+            self.draw_text(x, y + 60, "SPACE: スタート", 10, jp=True, small_jp=True)
+            self.draw_text(x, y + 72, "C: がめん保存", 10, jp=True, small_jp=True)
         if self.state == GameState.GAME_OVER:
             self.draw_text(51, 58, "GAME OVER", 8)
             self.draw_text(43, 68, "Press R to retry", 7)

@@ -62,4 +62,9 @@ STAGE_CLEAR_WAIT = 90
 JP_FONT_PATH = str(ROOT_DIR / "assets/fonts/PixelMplus12-Regular.ttf")
 JP_FONT_FALLBACK_PATH = str(ROOT_DIR / "assets/fonts/umplus_j12r.bdf")
 JP_FONT_SIZE = 12
-JP_SMALL_FONT_PATH = str(ROOT_DIR / "assets/fonts/umplus_j10r.bdf")
+JP_SMALL_FONT_PATH = str(ROOT_DIR / "assets/fonts/umplus_j12r.bdf")
+JP_FONT_SYSTEM_CANDIDATES = [
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/opentype/ipafont-gothic/ipag.ttf",
+    "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf",
+]
