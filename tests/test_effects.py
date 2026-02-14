@@ -26,6 +26,14 @@ class HitEffectSystemTests(unittest.TestCase):
             fx.tick()
         self.assertEqual(len(fx.effects), 0)
 
+    def test_spawn_boss_burst_is_large(self):
+        fx = HitEffectSystem()
+        fx.spawn_enemy_hit(10, 20, boss=True)
+        normal_boss_hit = len(fx.effects)
+        fx.effects.clear()
+        fx.spawn_boss_burst(10, 20)
+        self.assertGreater(len(fx.effects), normal_boss_hit)
+
 
 if __name__ == "__main__":
     unittest.main()

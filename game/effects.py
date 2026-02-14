@@ -33,6 +33,13 @@ class HitEffectSystem:
             dy = (-1 + (i // 5) * 0.6) * speed
             self.effects.append(HitEffect(x, y, dx, dy, 12 if boss else 9, 8 if boss else 14))
 
+    def spawn_boss_burst(self, x: float, y: float):
+        for i in range(24):
+            dx = -2.2 + (i % 8) * 0.65
+            dy = -1.8 + (i // 8) * 0.8
+            color = 10 if i % 2 == 0 else 7
+            self.effects.append(HitEffect(x, y, dx, dy, 16, color))
+
     def tick(self):
         alive: list[HitEffect] = []
         for e in self.effects:

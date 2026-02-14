@@ -51,6 +51,7 @@ from game.progression import ProgressionStore
 from game.assets import AssetCatalog, EnemySpriteAnimator, SpriteSheet
 from game.automation import AutoRunConfig
 from game.effects import HitEffectSystem
+from game.audio import stage_music_pattern
 
 
 class App:
@@ -111,6 +112,10 @@ class App:
         pyxel.sounds[5].set("c3b2a2", "p", "7", "f", 16) # miss life
         pyxel.sounds[6].set("c4g3e3c3", "p", "7", "f", 18)  # stage clear
         pyxel.sounds[7].set("a2f2d2c2", "p", "7", "f", 20)  # game over
+        pyxel.sounds[8].set("e3g3b3e4", "t", "6", "n", 24)
+        pyxel.sounds[9].set("d3a3d4", "t", "6", "n", 24)
+        pyxel.sounds[10].set("c3f3a3", "s", "5", "n", 22)
+        pyxel.sounds[11].set("g2c3d3", "s", "5", "n", 22)
 
     def load_visual_assets(self):
         if self.asset_catalog.missing_required_files():
@@ -359,9 +364,10 @@ class App:
                     self.score += self._enemy_score(enemy.type)
                     self.combo += 1
                     self.combo_timer = 180
-                    self.hit_fx.spawn_enemy_hit(
-                        enemy.x, enemy.y, boss=(enemy.type == EnemyType.NULL_CORE_BOSS)
-                    )
+                    is_boss = enemy.type == EnemyType.NULL_CORE_BOSS
+                    self.hit_fx.spawn_enemy_hit(enemy.x, enemy.y, boss=is_boss)
+                    if is_boss:
+                        self.hit_fx.spawn_boss_burst(enemy.x, enemy.y)
                     self.play_se(3)
         self.enemies = [e for e in self.enemies if e.hp > 0]
 
@@ -394,7 +400,7 @@ class App:
 
     def play_stage_music(self):
         pyxel.stop(2)
-        pyxel.play(2, [0, 1])
+        pyxel.play(2, stage_music_pattern(self.stage))
 
     def play_se(self, sound_id: int):
         pyxel.play(3, sound_id)
