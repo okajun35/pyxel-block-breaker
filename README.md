@@ -13,6 +13,8 @@ python block_breaker.py
 
 ## 操作方法
 
+- タイトル画面で設定して `ENTER / SPACE` で開始
+- はじめてモード時はチュートリアル画面が1回入ります（`SPACE` 開始 / `S` スキップ）
 - `1 / 2 / 3`: 難易度選択（開始前）
   - `1: Story`
   - `2: Standard`

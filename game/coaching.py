@@ -7,13 +7,13 @@ def suggest_next_actions(report: RunReport, recent_causes: list[str]) -> list[st
     ball_drops = sum(1 for c in recent_causes if c == "ball_drop")
 
     if enemy_hits >= 2:
-        tips.append("敵を先に処理")
+        tips.append("てきをさきにたいおう")
     if ball_drops >= 1:
-        tips.append("中央受けを意識")
+        tips.append("まんなかうけをいしき")
     if report.max_combo <= 2:
-        tips.append("角度でコンボ維持")
+        tips.append("かくとてこんほいし")
     if report.cleared_phase <= 2:
-        tips.append("序盤はW/S優先")
+        tips.append("しよはんはW/Sゆうせん")
     if not tips:
-        tips.append("設定を変えて挑戦")
+        tips.append("せつていをかえてちようせん")
     return tips[:3]

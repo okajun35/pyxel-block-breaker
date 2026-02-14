@@ -92,17 +92,21 @@ class App:
         yield JP_FONT_PATH
 
     def load_jp_font(self, size: int):
+        try:
+            # Prefer bundled BDF for stable pixel glyphs on Pyxel.
+            return pyxel.Font(JP_FONT_FALLBACK_PATH)
+        except Exception:
+            pass
         for path in self._font_candidates():
             try:
                 return pyxel.Font(path, size)
             except Exception:
                 continue
-        try:
-            return pyxel.Font(JP_FONT_FALLBACK_PATH)
-        except Exception:
-            return None
+        return None
 
     def load_jp_small_font(self):
+        if getattr(self, "jp_font", None) is not None:
+            return self.jp_font
         return self.load_jp_font(JP_FONT_SIZE)
 
     def setup_audio(self):
@@ -167,12 +171,12 @@ class App:
         if self.jp_small_font is not None:
             x = START_PANEL_X + 10
             y = START_PANEL_Y + 20
-            img.text(x, y, "1/2/3: むずかしさ", 7, self.jp_small_font)
-            img.text(x, y + 12, "TAB: モードきりかえ", 7, self.jp_small_font)
+            img.text(x, y, "1/2/3: なんいど", 7, self.jp_small_font)
+            img.text(x, y + 12, "TAB: もーどきりかえ", 7, self.jp_small_font)
             img.text(x, y + 24, "ひだり/みぎ: いどう", 7, self.jp_small_font)
-            img.text(x, y + 36, "W/S/M/F: アイテム", 7, self.jp_small_font)
+            img.text(x, y + 36, "W/S/M/F: あいてむ", 7, self.jp_small_font)
             img.text(x, y + 48, "SPACE: スタート", 10, self.jp_small_font)
-            img.text(x, y + 60, "C: 保存  U:ライフ強化", 10, self.jp_small_font)
+            img.text(x, y + 60, "C:ほぞん U:らいふ+", 10, self.jp_small_font)
         img.save(str(tmp_dir / "jp_preview.png"), 1)
 
     def reset(self):
@@ -465,13 +469,13 @@ class App:
         if self.selected_mode == DifficultyMode.STORY:
             return "やさしい"
         if self.selected_mode == DifficultyMode.HARDCORE:
-            return "むずかしい"
+            return "むすかしい"
         return "ふつう"
 
     def _protocol_label_jp(self) -> str:
         if self.selected_protocol == ProtocolType.FUSION:
-            return "ゆうごう"
-        return "はんしゃ"
+            return "ゆうこう"
+        return "はんしや"
 
     def _grant_core_for_stage_clear(self):
         if not hasattr(self, "progression"):
@@ -882,11 +886,11 @@ class App:
                 self.danger_flash_timer -= 1
             if self._is_intro_fixed():
                 if self.blocks_broken_total < 5:
-                    self.draw_text(4, 30, "もくひょう1:5こ壊す", 10, jp=True, small_jp=True)
+                    self.draw_text(4, 30, "もくひょう1:5ここわす", 10, jp=True, small_jp=True)
                 elif self.items_collected_total < 1:
-                    self.draw_text(4, 30, "もくひょう2:1こ取る", 10, jp=True, small_jp=True)
+                    self.draw_text(4, 30, "もくひょう2:1ことる", 10, jp=True, small_jp=True)
                 else:
-                    self.draw_text(4, 30, "もくひょう3:面クリア", 10, jp=True, small_jp=True)
+                    self.draw_text(4, 30, "もくひょう3:めんくりあ", 10, jp=True, small_jp=True)
 
         if layout.show_hud:
             self.draw_text(4, layout.upper_bottom_y, f"Score:{self.score}", 10)
@@ -933,52 +937,43 @@ class App:
             self.draw_text(43, 56, f"STAGE {self.stage} CLEAR!", 11)
             self.draw_text(28, 66, "Next: N or auto", 7)
         if self.state == GameState.TITLE:
-            if self.use_sprite_assets:
-                pyxel.blt(layout.panel_x, layout.panel_y, 2, 0, 0, layout.panel_w, layout.panel_h, 1)
-            else:
-                pyxel.rect(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 0)
-                pyxel.rectb(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 7)
+            pyxel.rect(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 0)
+            pyxel.rectb(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 7)
             x = layout.panel_x + 10
             y = layout.panel_y + 8
-            self.draw_text(x, y, "ぶろっくくずし", 10, jp=True)
+            self.draw_text(x, y, "すたあと めにゆう", 10, jp=True)
             cursor = [">", " ", " ", " ", " ", " "]
             cursor[self.title_menu_index] = ">"
             style = "はじめて" if self.play_style_beginner else "ふつう"
             enemy_opt = "ON" if self.enemy_enabled_option else "OFF"
             enemy_view = "ON" if self.enemy_visible_option else "OFF"
-            self.draw_text(x, y + 14, f"{cursor[0]} すたーと", 7, jp=True)
-            self.draw_text(x, y + 24, f"{cursor[1]} 難易度:{self._mode_label_jp()}", 7, jp=True)
-            self.draw_text(x, y + 34, f"{cursor[2]} モード:{self._protocol_label_jp()}", 7, jp=True)
+            self.draw_text(x, y + 14, f"{cursor[0]} はしめる", 7, jp=True)
+            self.draw_text(x, y + 24, f"{cursor[1]} なんいど:{self._mode_label_jp()}", 7, jp=True)
+            self.draw_text(x, y + 34, f"{cursor[2]} るる:{self._protocol_label_jp()}", 7, jp=True)
             self.draw_text(x, y + 44, f"{cursor[3]} あそび:{style}", 7, jp=True)
-            self.draw_text(x, y + 54, f"{cursor[4]} 敵有効:{enemy_opt}", 7, jp=True)
-            self.draw_text(x, y + 64, f"{cursor[5]} 敵表示:{enemy_view}", 7, jp=True)
-            self.draw_text(x, y + 76, "↑↓:選択  ←→:変更", 12, jp=True)
-            self.draw_text(x, y + 86, "ENTER/SPACE:開始", 10, jp=True)
-            self.draw_text(x, y + 98, "U/I/O:強化", 11, jp=True)
+            self.draw_text(x, y + 54, f"{cursor[4]} てき:{enemy_opt}", 7, jp=True)
+            self.draw_text(x, y + 64, f"{cursor[5]} てきみえる:{enemy_view}", 7, jp=True)
+            self.draw_text(x, y + 76, "U/D:えらぶ L/R:へんこう", 12, jp=True)
+            self.draw_text(x, y + 86, "ENTER/SPACE:START", 10, jp=True)
+            self.draw_text(x, y + 98, "U/I/O:きょうか", 11, jp=True)
             if hasattr(self, "progression"):
                 core = self.progression.state.core_shards
                 self.draw_text(x + 112, y + 98, f"Core:{core}", 7)
         if self.state == GameState.TUTORIAL:
-            if self.use_sprite_assets:
-                pyxel.blt(layout.panel_x, layout.panel_y, 2, 0, 0, layout.panel_w, layout.panel_h, 1)
-            else:
-                pyxel.rect(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 0)
-                pyxel.rectb(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 7)
+            pyxel.rect(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 0)
+            pyxel.rectb(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 7)
             x = layout.panel_x + 10
             y = layout.panel_y + 8
-            self.draw_text(x, y, "ちゅーとりある", 10, jp=True)
-            self.draw_text(x, y + 14, "1) ひだり/みぎ で移動", 7, jp=True)
-            self.draw_text(x, y + 24, "2) 5こ 壊してみる", 7, jp=True)
-            self.draw_text(x, y + 34, "3) あいてむを1こ取る", 7, jp=True)
-            self.draw_text(x, y + 48, "はじめて: 敵はあとで出る", 12, jp=True)
+            self.draw_text(x, y, "ちゆとりある", 10, jp=True)
+            self.draw_text(x, y + 14, "1) ひだり/みぎ で いどう", 7, jp=True)
+            self.draw_text(x, y + 24, "2) 5こ こわしてみる", 7, jp=True)
+            self.draw_text(x, y + 34, "3) あいてむを1こ とる", 7, jp=True)
+            self.draw_text(x, y + 48, "はじめて: てきは あとででる", 12, jp=True)
             self.draw_text(x, y + 60, "SPACE: はじめる", 10, jp=True)
-            self.draw_text(x, y + 70, "S:すきっぷ", 8, jp=True)
+            self.draw_text(x, y + 70, "S: すきっぷ", 8, jp=True)
         if self.state == GameState.WAITING_START:
-            if self.use_sprite_assets:
-                pyxel.blt(layout.panel_x, layout.panel_y, 2, 0, 0, layout.panel_w, layout.panel_h, 1)
-            else:
-                pyxel.rect(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 0)
-                pyxel.rectb(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 7)
+            pyxel.rect(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 0)
+            pyxel.rectb(layout.panel_x, layout.panel_y, layout.panel_w, layout.panel_h, 7)
             x = layout.panel_x + 10
             y = layout.panel_y + 8
             self.draw_text(x, y, "じゅんびOK", 10, jp=True)
