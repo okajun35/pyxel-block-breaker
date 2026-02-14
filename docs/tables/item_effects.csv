@@ -1,0 +1,5 @@
+item_id,display_name,max_level,base_duration_sec,same_item_bonus_sec,lvl2_bonus,lvl3_bonus,stage_min
+W,Wide,3,8,10,paddle_width_plus_6,paddle_width_plus_12,1
+S,Slow,3,8,10,speed_rate_minus_0.10,speed_rate_minus_0.20,1
+M,Multi,3,0,0,spawn_plus_1_ball,spawn_plus_2_ball,1
+F,Fast,3,8,10,speed_rate_plus_0.12,speed_rate_plus_0.24,2

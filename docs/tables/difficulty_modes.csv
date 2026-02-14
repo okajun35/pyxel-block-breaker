@@ -1,0 +1,4 @@
+mode,display_name,base_lives,enemy_hp_mul,enemy_damage_mul,drop_rate_mul,score_mul,revive_count,early_guard_seconds,notes
+story,Story,4,0.85,0.85,1.25,0.90,1,360,初心者向け・救済あり
+standard,Standard,3,1.00,1.00,1.00,1.00,0,0,標準
+hardcore,Hardcore,2,1.25,1.15,0.90,1.35,0,0,高難度・救済なし

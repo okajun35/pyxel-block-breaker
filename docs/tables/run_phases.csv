@@ -1,0 +1,6 @@
+phase_id,time_start_sec,time_end_sec,label,enemy_density_mul,elite_spawn_rate,shop_slot_count,event_weight_risk,event_weight_reward,boss_type
+1,0,360,BOOTSTRAP,0.85,0.05,3,0.10,0.45,mini_alpha
+2,360,720,ROUTE_SPLIT,1.00,0.10,3,0.20,0.40,mini_beta
+3,720,1080,PRESSURE,1.20,0.18,2,0.35,0.30,none
+4,1080,1440,WAVE_ASSAULT,1.45,0.24,2,0.45,0.25,sub_dual
+5,1440,1800,CORE_BREACH,1.65,0.30,1,0.50,0.20,final_null_core

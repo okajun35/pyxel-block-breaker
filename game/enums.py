@@ -13,3 +13,14 @@ class GameState(str, Enum):
     PLAYING = "playing"
     STAGE_CLEAR = "stage_clear"
     GAME_OVER = "game_over"
+
+
+class DifficultyMode(str, Enum):
+    STORY = "story"
+    STANDARD = "standard"
+    HARDCORE = "hardcore"
+
+
+class ProtocolType(str, Enum):
+    FUSION = "fusion"
+    REFLEX = "reflex"

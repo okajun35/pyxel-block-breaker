@@ -156,10 +156,17 @@ class StageField:
         self.hard_count = 0
         self.item_count = 0
 
-    def setup(self, stage: int) -> None:
+    def setup(
+        self,
+        stage: int,
+        enemy_hp_mul: float = 1.0,
+        item_spawn_mul: float = 1.0,
+        phase_density_mul: float = 1.0,
+        phase_reward_mul: float = 1.0,
+    ) -> None:
         self.block_hp = [[1 for _ in range(BLOCK_COLS)] for _ in range(BLOCK_ROWS)]
         self.item_blocks = [[None for _ in range(BLOCK_COLS)] for _ in range(BLOCK_ROWS)]
-        moving_hp = min(4, 1 + stage)
+        moving_hp = min(6, max(1, int((1 + stage) * enemy_hp_mul)))
         moving_speed = min(1.8, MOVING_BLOCK_SPEED + 0.1 * (stage - 1))
         self.moving_block = MovingBlock(
             x=80 - MOVING_BLOCK_W // 2,
@@ -168,13 +175,15 @@ class StageField:
             hp=moving_hp,
         )
         total_blocks = BLOCK_ROWS * BLOCK_COLS
+        hard_base = HARD_BLOCK_COUNT + (stage - 1) * HARD_BLOCK_INC_PER_STAGE
+        item_base = ITEM_BLOCK_COUNT + (stage - 1) * ITEM_BLOCK_INC_PER_STAGE
         self.hard_count = min(
             total_blocks - 1,
-            HARD_BLOCK_COUNT + (stage - 1) * HARD_BLOCK_INC_PER_STAGE,
+            max(1, int(hard_base * enemy_hp_mul * phase_density_mul)),
         )
         self.item_count = min(
             total_blocks,
-            ITEM_BLOCK_COUNT + (stage - 1) * ITEM_BLOCK_INC_PER_STAGE,
+            max(1, int(item_base * item_spawn_mul * phase_reward_mul)),
         )
         self.place_hard_blocks(self.hard_count)
         self.place_item_blocks(self.item_count, stage)

@@ -5,6 +5,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 from game.app import App
+from game.config import BalanceConfig
+from game.enums import DifficultyMode, ProtocolType
 from game.constants import BASE_SPEED_RATE
 
 
@@ -17,6 +19,9 @@ class AppInitTests(unittest.TestCase):
     def test_reset_initializes_ball_speed_rate(self):
         app = App.__new__(App)
         app.effect_system = DummyEffectSystem()
+        app.balance = BalanceConfig()
+        app.selected_mode = DifficultyMode.STANDARD
+        app.selected_protocol = ProtocolType.FUSION
         app.setup_stage = lambda: None
 
         App.reset(app)

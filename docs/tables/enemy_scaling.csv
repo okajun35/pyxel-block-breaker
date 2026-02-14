@@ -1,0 +1,6 @@
+enemy_id,base_hp,base_speed,collision_damage,phase_hp_gain_pct,phase_speed_gain_pct,hard_mode_extra_hp_pct,hard_mode_extra_speed_pct
+drone,30,1.00,1,20,6,15,5
+shield_node,90,0.70,1,28,4,18,4
+splitter,60,0.95,1,24,7,16,6
+sniper_orb,45,1.10,1,22,8,14,7
+null_core_boss,1200,0.60,2,35,5,20,5

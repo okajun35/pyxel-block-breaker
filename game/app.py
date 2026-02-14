@@ -34,8 +34,9 @@ from game.constants import (
     TMP_DIR,
     WIDTH,
 )
+from game.config import BalanceConfig
 from game.entities import FallingItem
-from game.enums import GameState, ItemType
+from game.enums import DifficultyMode, GameState, ItemType, ProtocolType
 from game.systems import BallSystem, EffectSystem, StageField
 
 
@@ -48,6 +49,7 @@ class App:
         self.jp_font = self.load_jp_font(JP_FONT_SIZE)
         self.jp_small_font = self.load_jp_small_font()
         self.setup_audio()
+        self.balance = BalanceConfig()
         self.ball_system = BallSystem()
         self.effect_system = EffectSystem()
         self.stage_field = StageField()
@@ -115,7 +117,15 @@ class App:
         self.paddle_w = 24
         self.paddle_x = WIDTH // 2 - self.paddle_w // 2
         self.ball_speed_rate = BASE_SPEED_RATE
-        self.lives = START_LIVES
+        if not hasattr(self, "selected_mode"):
+            self.selected_mode = DifficultyMode.STANDARD
+        if not hasattr(self, "selected_protocol"):
+            self.selected_protocol = ProtocolType.FUSION
+        self.run_elapsed_frames = 0
+        self.current_phase = self.balance.get_phase_by_elapsed_sec(0)
+        difficulty = self.balance.get_difficulty(self.selected_mode)
+        self.remaining_revives = difficulty.revive_count
+        self.lives = difficulty.base_lives
         self.stage = 1
         self.state = GameState.WAITING_START
         self.stage_clear_timer = 0
@@ -126,7 +136,17 @@ class App:
         self.setup_stage()
 
     def setup_stage(self):
-        self.stage_field.setup(self.stage)
+        difficulty = self.balance.get_difficulty(self.selected_mode)
+        protocol = self.balance.get_protocol(self.selected_protocol)
+        elapsed_sec = self.run_elapsed_frames // 60
+        self.current_phase = self.balance.get_phase_by_elapsed_sec(elapsed_sec)
+        self.stage_field.setup(
+            self.stage,
+            enemy_hp_mul=difficulty.enemy_hp_mul * protocol.enemy_hp_mul,
+            item_spawn_mul=difficulty.drop_rate_mul * protocol.item_spawn_mul,
+            phase_density_mul=self.current_phase.enemy_density_mul,
+            phase_reward_mul=self.current_phase.event_weight_reward + 0.7,
+        )
         self.respawn_ball()
 
     def respawn_ball(self):
@@ -183,6 +203,28 @@ class App:
             return
 
         if self.state == GameState.WAITING_START:
+            if self.run_elapsed_frames == 0:
+                if pyxel.btnp(pyxel.KEY_1):
+                    self.selected_mode = DifficultyMode.STORY
+                    difficulty = self.balance.get_difficulty(self.selected_mode)
+                    self.lives = difficulty.base_lives
+                    self.remaining_revives = difficulty.revive_count
+                if pyxel.btnp(pyxel.KEY_2):
+                    self.selected_mode = DifficultyMode.STANDARD
+                    difficulty = self.balance.get_difficulty(self.selected_mode)
+                    self.lives = difficulty.base_lives
+                    self.remaining_revives = difficulty.revive_count
+                if pyxel.btnp(pyxel.KEY_3):
+                    self.selected_mode = DifficultyMode.HARDCORE
+                    difficulty = self.balance.get_difficulty(self.selected_mode)
+                    self.lives = difficulty.base_lives
+                    self.remaining_revives = difficulty.revive_count
+                if pyxel.btnp(pyxel.KEY_TAB):
+                    if self.selected_protocol == ProtocolType.FUSION:
+                        self.selected_protocol = ProtocolType.REFLEX
+                    else:
+                        self.selected_protocol = ProtocolType.FUSION
+                    self.setup_stage()
             if pyxel.btnp(pyxel.KEY_SPACE):
                 self.state = GameState.PLAYING
             return
@@ -194,6 +236,7 @@ class App:
         self.paddle_x = max(0, min(WIDTH - self.paddle_w, self.paddle_x))
 
         alive_balls = []
+        self.run_elapsed_frames += 1
         for ball in self.ball_system.balls:
             ball.x += ball.vx * self.ball_speed_rate
             ball.y += ball.vy * self.ball_speed_rate
@@ -226,9 +269,13 @@ class App:
         if not self.ball_system.balls:
             self.lives -= 1
             if self.lives <= 0:
-                self.state = GameState.GAME_OVER
-                self.play_se(7)
-                return
+                if self.remaining_revives > 0:
+                    self.remaining_revives -= 1
+                    self.lives = 1
+                else:
+                    self.state = GameState.GAME_OVER
+                    self.play_se(7)
+                    return
             self.play_se(5)
             self.respawn_ball()
             return
@@ -283,6 +330,7 @@ class App:
             5,
         )
         self.draw_text(124, HEIGHT - 8, f"Stg:{self.stage}", 10)
+        self.draw_text(118, 20, self.current_phase.label[:5], 12)
 
         for row in range(BLOCK_ROWS):
             for col in range(BLOCK_COLS):
@@ -326,6 +374,7 @@ class App:
 
         self.draw_text(4, HEIGHT - 8, f"Balls:{len(self.ball_system.balls)}", 7)
         self.draw_text(62, HEIGHT - 8, f"Life:{self.lives}", 8)
+        self.draw_text(100, HEIGHT - 8, f"Rv:{self.remaining_revives}", 14)
 
         if self.effect_system.effect_wide_timer > 0:
             self.draw_text(
@@ -358,11 +407,18 @@ class App:
             pyxel.rect(8, 28, 144, 72, 0)
             pyxel.rectb(8, 28, 144, 72, 7)
             self.draw_text(14, 36, "あそびかた", 10, jp=True)
-            self.draw_text(14, 48, "ひだり/みぎ いどう", 7, jp=True, small_jp=True)
-            self.draw_text(14, 58, "ぜんぶこわして クリア", 7, jp=True, small_jp=True)
-            self.draw_text(14, 68, "W:バー  S:スロー", 7, jp=True, small_jp=True)
-            self.draw_text(14, 78, "M:+たま  F:はやい(2~)", 7, jp=True, small_jp=True)
-            self.draw_text(14, 90, "SPACE:スタート C:保存", 10, jp=True, small_jp=True)
+            if self.run_elapsed_frames == 0:
+                self.draw_text(14, 48, "1:Story 2:Std 3:Hard", 7)
+                self.draw_text(14, 58, f"Mode:{self.selected_mode.value}", 7)
+                self.draw_text(14, 68, f"Proto:{self.selected_protocol.value} (TAB)", 7)
+                self.draw_text(14, 78, "W/S/M/F items + SF phase", 7)
+                self.draw_text(14, 90, "SPACE:start  C:shot", 10)
+            else:
+                self.draw_text(14, 48, "ひだり/みぎ いどう", 7, jp=True, small_jp=True)
+                self.draw_text(14, 58, "ぜんぶこわして クリア", 7, jp=True, small_jp=True)
+                self.draw_text(14, 68, "W:バー  S:スロー", 7, jp=True, small_jp=True)
+                self.draw_text(14, 78, "M:+たま  F:はやい(2~)", 7, jp=True, small_jp=True)
+                self.draw_text(14, 90, "SPACE:スタート C:保存", 10, jp=True, small_jp=True)
         if self.state == GameState.GAME_OVER:
             self.draw_text(51, 58, "GAME OVER", 8)
             self.draw_text(43, 68, "Press R to retry", 7)
