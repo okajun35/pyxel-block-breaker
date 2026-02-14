@@ -23,6 +23,7 @@ python block_breaker.py
 - `Fusion` は反射の補正が強め、`Reflex` は反射判定がシビアでスコア倍率高め
 - `SPACE`: ゲーム開始（ステージ開始）
 - `← / →`: バー移動
+- `H`: HUD詳細表示のON/OFF
 - `C`: スクリーンショット保存（`tmp/jp.png` と `tmp/shot_YYYYMMDD_HHMMSS.png`）
 - `N`: ステージクリア後に次ステージへ進む
 - `R`: 最初からリセット

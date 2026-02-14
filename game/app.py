@@ -146,6 +146,7 @@ class App:
         self.score = 0
         self.combo = 0
         self.combo_timer = 0
+        self.hud_detailed = False
         self.effect_system.reset_all()
         self.setup_stage()
 
@@ -341,6 +342,8 @@ class App:
         if pyxel.btnp(pyxel.KEY_R):
             self.reset()
             return
+        if pyxel.btnp(pyxel.KEY_H):
+            self.hud_detailed = not self.hud_detailed
         if pyxel.btnp(pyxel.KEY_C):
             self.save_screen_shot()
         if self.shot_message_timer > 0:
@@ -492,9 +495,10 @@ class App:
 
         pyxel.cls(1)
         if layout.show_hud:
-            self.draw_text(4, layout.top_text_y, "LR Move  R Reset  C Shot", 7)
-            self.draw_text(4, layout.top_sub_y, f"{self.selected_mode.value}/{self.selected_protocol.value}", 12)
-            self.draw_text(WIDTH - 74, layout.top_sub_y, self.current_phase.label[:8], 12)
+            self.draw_text(4, layout.top_text_y, "LR Move  H HUD  C Shot", 7)
+            if self.hud_detailed:
+                self.draw_text(4, layout.top_sub_y, f"{self.selected_mode.value}/{self.selected_protocol.value}", 12)
+                self.draw_text(WIDTH - 74, layout.top_sub_y, self.current_phase.label[:8], 12)
 
         draw_world = not (self.state == GameState.WAITING_START and self.run_elapsed_frames == 0)
         if draw_world:
@@ -553,39 +557,41 @@ class App:
 
         if layout.show_hud:
             self.draw_text(4, layout.upper_bottom_y, f"Score:{self.score}", 10)
-            self.draw_text(90, layout.upper_bottom_y, f"Combo:{self.combo}", 6)
+            if self.combo > 0 or self.hud_detailed:
+                self.draw_text(90, layout.upper_bottom_y, f"Combo:{self.combo}", 6)
             self.draw_text(4, layout.bottom_y, f"Balls:{len(self.ball_system.balls)}", 7)
             self.draw_text(74, layout.bottom_y, f"Life:{self.lives}", 8)
             self.draw_text(124, layout.bottom_y, f"Rv:{self.remaining_revives}", 14)
             self.draw_text(WIDTH - 54, layout.bottom_y, f"Stg:{self.stage}", 10)
-            self.draw_text(
-                4,
-                layout.bottom_y - 12,
-                f"Hard:{self.stage_field.hard_count} Item:{self.stage_field.item_count}",
-                5,
-            )
+            if self.hud_detailed:
+                self.draw_text(
+                    4,
+                    layout.bottom_y - 12,
+                    f"Hard:{self.stage_field.hard_count} Item:{self.stage_field.item_count}",
+                    5,
+                )
 
-            if self.effect_system.effect_wide_timer > 0:
-                self.draw_text(
-                    140,
-                    layout.upper_bottom_y,
-                    f"W{self.effect_system.effect_wide_level}:{self.effect_system.effect_wide_timer // 60}s",
-                    9,
-                )
-            if self.effect_system.effect_slow_timer > 0:
-                self.draw_text(
-                    178,
-                    layout.upper_bottom_y,
-                    f"S{self.effect_system.effect_slow_level}:{self.effect_system.effect_slow_timer // 60}s",
-                    11,
-                )
-            if self.effect_system.effect_fast_timer > 0:
-                self.draw_text(
-                    216,
-                    layout.upper_bottom_y,
-                    f"F{self.effect_system.effect_fast_level}:{self.effect_system.effect_fast_timer // 60}s",
-                    8,
-                )
+                if self.effect_system.effect_wide_timer > 0:
+                    self.draw_text(
+                        140,
+                        layout.upper_bottom_y,
+                        f"W{self.effect_system.effect_wide_level}:{self.effect_system.effect_wide_timer // 60}s",
+                        9,
+                    )
+                if self.effect_system.effect_slow_timer > 0:
+                    self.draw_text(
+                        178,
+                        layout.upper_bottom_y,
+                        f"S{self.effect_system.effect_slow_level}:{self.effect_system.effect_slow_timer // 60}s",
+                        11,
+                    )
+                if self.effect_system.effect_fast_timer > 0:
+                    self.draw_text(
+                        216,
+                        layout.upper_bottom_y,
+                        f"F{self.effect_system.effect_fast_level}:{self.effect_system.effect_fast_timer // 60}s",
+                        8,
+                    )
         if self.shot_message_timer > 0:
             self.draw_text(4, layout.top_sub_y + 10, self.shot_message, 10)
 
@@ -603,13 +609,13 @@ class App:
                 self.draw_text(x, y + 22, f"Mode:{self.selected_mode.value}", 7)
                 self.draw_text(x, y + 32, f"Proto:{self.selected_protocol.value} (TAB)", 7)
                 self.draw_text(x, y + 42, "W/S/M/F items + SF phase", 7)
-                self.draw_text(x, y + 54, "SPACE:start  C:shot", 10)
+                self.draw_text(x, y + 54, "SPACE:start  C:shot  H:hud", 10)
             else:
                 self.draw_text(x, y + 12, "ひだり/みぎ いどう", 7, jp=True, small_jp=True)
                 self.draw_text(x, y + 22, "ぜんぶこわして クリア", 7, jp=True, small_jp=True)
                 self.draw_text(x, y + 32, "W:バー  S:スロー", 7, jp=True, small_jp=True)
                 self.draw_text(x, y + 42, "M:+たま  F:はやい(2~)", 7, jp=True, small_jp=True)
-                self.draw_text(x, y + 54, "SPACE:スタート C:保存", 10, jp=True, small_jp=True)
+                self.draw_text(x, y + 54, "SPACE:スタート C:保存 H:HUD", 10, jp=True, small_jp=True)
         if self.state == GameState.GAME_OVER:
             self.draw_text(51, 58, "GAME OVER", 8)
             self.draw_text(43, 68, "Press R to retry", 7)
