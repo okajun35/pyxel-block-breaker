@@ -26,6 +26,11 @@ class UILayout:
     bottom_y: int
     upper_bottom_y: int
     toast_y: int
+    balls_x: int
+    life_x: int
+    rev_x: int
+    role_x: int
+    stage_x: int
 
 
 def build_layout(state: GameState) -> UILayout:
@@ -43,4 +48,9 @@ def build_layout(state: GameState) -> UILayout:
         bottom_y=bottom_y,
         upper_bottom_y=upper_bottom_y,
         toast_y=HEIGHT - BOTTOM_HUD_H - 12,
+        balls_x=4,
+        life_x=52,
+        rev_x=92,
+        role_x=126,
+        stage_x=194,
     )

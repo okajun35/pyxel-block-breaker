@@ -13,11 +13,11 @@ BOTTOM_HUD_H = 30
 
 BASE_PADDLE_W = 24
 PADDLE_H = 4
-PADDLE_Y = HEIGHT - 10
+PADDLE_Y = HEIGHT - 15
 PADDLE_SPEED = 3
 
 BALL_R = 2
-BASE_BALL_SPEED = 2.26
+BASE_BALL_SPEED = 2.712
 
 BLOCK_COLS = 8
 BLOCK_ROWS = 4
@@ -40,6 +40,9 @@ HARD_BLOCK_INC_PER_STAGE = 1
 START_SLOW_DURATION = 60 * 3
 START_SLOW_RATE = 0.5
 BASE_SPEED_RATE = 0.8
+BLOCK_HIT_SPEEDUP_STAGE_MIN = 2
+BLOCK_HIT_SPEEDUP_STEP = 0.004
+BLOCK_HIT_SPEEDUP_MAX_MUL = 1.2
 
 FAST_BASE_RATE = 1.0
 MAX_BALLS = 5
@@ -65,7 +68,8 @@ JP_FONT_PATH = str(ROOT_DIR / "assets/fonts/PixelMplus12-Regular.ttf")
 JP_FONT_DOT_PATH = str(ROOT_DIR / "assets/fonts/DotGothic16-Regular.ttf")
 JP_FONT_FALLBACK_PATH = str(ROOT_DIR / "assets/fonts/umplus_j12r.bdf")
 JP_FONT_SIZE = 14
-JP_SMALL_FONT_PATH = str(ROOT_DIR / "assets/fonts/umplus_j12r.bdf")
+JP_SMALL_FONT_PATH = str(ROOT_DIR / "assets/fonts/misaki_gothic.bdf")
+JP_SMALL_FONT_SIZE = 9
 JP_FONT_SYSTEM_CANDIDATES = [
     JP_FONT_DOT_PATH,
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",

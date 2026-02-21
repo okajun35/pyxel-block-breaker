@@ -1,32 +1,51 @@
 import unittest
 from unittest.mock import patch
 
-from game.constants import ITEM_BONUS_DURATION, ITEM_DURATION, WIDTH
+from game.constants import BLOCK_OFFSET_X, BLOCK_OFFSET_Y, ITEM_BONUS_DURATION, ITEM_DURATION, WIDTH
+from game.entities import Ball
 from game.enums import ItemType
 from game.systems import BallSystem, EffectSystem, StageField
 
 
 class StageFieldItemTests(unittest.TestCase):
-    def test_fast_item_appears_from_stage_2(self):
+    def test_fast_item_appears_from_stage_4(self):
         field = StageField()
         field.item_blocks = [[None for _ in range(8)] for _ in range(4)]
 
         with patch("game.systems.pyxel.rndi", side_effect=lambda a, b: b):
-            field.place_item_blocks(target=1, stage=2)
+            field.place_item_blocks(target=1, stage=4)
 
         flat = [cell for row in field.item_blocks for cell in row]
         self.assertIn(ItemType.FAST, flat)
 
-    def test_fast_item_not_used_on_stage_1(self):
+    def test_fast_item_not_used_on_stage_2(self):
         field = StageField()
         field.item_blocks = [[None for _ in range(8)] for _ in range(4)]
 
         with patch("game.systems.pyxel.rndi", side_effect=lambda a, b: b):
-            field.place_item_blocks(target=1, stage=1)
+            field.place_item_blocks(
+                target=1,
+                stage=2,
+                allowed_items=[ItemType.WIDE, ItemType.SLOW],
+            )
 
         flat = [cell for row in field.item_blocks for cell in row if cell is not None]
         self.assertTrue(flat)
         self.assertNotIn(ItemType.FAST, flat)
+
+    def test_stage_1_is_classic_mode(self):
+        field = StageField()
+        field.setup(stage=1)
+        self.assertEqual(field.moving_block.hp, 0)
+        self.assertEqual(field.hard_count, 0)
+        self.assertEqual(field.item_count, 0)
+        flat = [cell for row in field.item_blocks for cell in row]
+        self.assertTrue(all(cell is None for cell in flat))
+
+    def test_stage_2_has_no_moving_block(self):
+        field = StageField()
+        field.setup(stage=2)
+        self.assertEqual(field.moving_block.hp, 0)
 
     def test_stage_2_layout_has_holes(self):
         field = StageField()
@@ -51,11 +70,25 @@ class StageFieldItemTests(unittest.TestCase):
 
     def test_moving_block_uses_current_screen_width(self):
         field = StageField()
-        field.setup(stage=1)
+        field.setup(stage=3)
         field.moving_block.x = WIDTH
         field.moving_block.vx = 1.0
         field.update_moving_block()
         self.assertLessEqual(field.moving_block.x, WIDTH - 18)
+
+    def test_destroyed_flag_true_only_when_block_breaks(self):
+        field = StageField()
+        field.setup(stage=1)
+        field.block_hp[0][0] = 2
+        ball = Ball(x=BLOCK_OFFSET_X + 1, y=BLOCK_OFFSET_Y + 1, vx=0.0, vy=1.0)
+
+        hit, _, destroyed = field.collide_ball(ball)
+        self.assertTrue(hit)
+        self.assertFalse(destroyed)
+
+        hit2, _, destroyed2 = field.collide_ball(ball)
+        self.assertTrue(hit2)
+        self.assertTrue(destroyed2)
 
 
 class EffectTimerTests(unittest.TestCase):

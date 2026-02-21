@@ -13,6 +13,7 @@ class GameState(str, Enum):
     TUTORIAL = "tutorial"
     WAITING_START = "waiting_start"
     PLAYING = "playing"
+    PAUSED = "paused"
     STAGE_CLEAR = "stage_clear"
     GAME_OVER = "game_over"
 
